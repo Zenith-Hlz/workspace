@@ -1,7 +1,7 @@
 CC = g++
 CFLAGS = -Wall -std=c++11
 
-SRCS = mian.cpp
+SRCS = main.cpp
 OBJS = $(SRCS:.cpp=.o)
 HEADERS = 
 
