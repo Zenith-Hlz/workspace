@@ -45,37 +45,29 @@ def merge_sort(arr):
     return arr
 
 
-def test_sorts(n):
-    arr = np.random.randint(1 << 30, size=n).tolist()
-    sorted_arr = sorted(arr)
+# Test and benchmarking  
+def test_and_benchmark():  
+    for n in [100, 1000, 10000, 100000]:  
+        arr = np.random.randint(1 << 30, size=n).tolist()  
 
-    # Insertion Sort
-    arr_copy = arr.copy()
-    start_time = time.time()
-    insertion_sorted = insertion_sort(arr_copy)
-    insertion_time = time.time() - start_time
+        # Validate correctness  
+        sorted_arr = sorted(arr)  
+        assert insertion_sort(arr.copy()) == sorted_arr, "Insertion sort failed"  
+        assert merge_sort(arr.copy()) == sorted_arr, "Merge sort failed"  
 
-    # Merge Sort
-    arr_copy = arr.copy()
-    start_time = time.time()
-    merge_sorted = merge_sort(arr_copy)
-    merge_time = time.time() - start_time
-
-    # Python's built-in sorted function
-    start_time = time.time()
-    builtin_sorted = sorted(arr)
-    builtin_time = time.time() - start_time
-
-    assert insertion_sorted == sorted_arr, "Insertion sort failed"
-    assert merge_sorted == sorted_arr, "Merge sort failed"
-    assert builtin_sorted == sorted_arr, "Built-in sort failed"
-
-    print(f"Array size: {n}")
-    print(f"Insertion Sort Time: {insertion_time:.6f} seconds")
-    print(f"Merge Sort Time: {merge_time:.6f} seconds")
-    print(f"Built-in Sort Time: {builtin_time:.6f} seconds")
-    print("-" * 50)
-
-
-for size in [100, 1000, 10000, 100000]:
-    test_sorts(size)
+        print(f"Array size: {n}\n")  
+        
+        # Performance measurement  
+        print("Insertion Sort Time:")  
+        %timeit insertion_sort(arr.copy())  
+        
+        print("Merge Sort Time:")  
+        %timeit merge_sort(arr.copy())  
+        
+        print("Python's Built-in Sort Time:")  
+        %timeit sorted(arr)  
+        
+        print("\n")
+        
+# Run the test and benchmarking  
+test_and_benchmark()  
