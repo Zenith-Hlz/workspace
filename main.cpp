@@ -1,40 +1,95 @@
-#include <iostream>
-#include <cmath>
-#include <limits>
+#include <cstdio>
+#include <cstdlib>
+#include <climits>
 
-bool testExpression(double d, float f)
+// Function to compare integers for qsort
+int compare(const void *a, const void *b)
 {
-    return ((d + f) - d) == f;
+    return (*(int *)a - *(int *)b);
+}
+
+// Function to perform binary search for upper bound
+int upper_bound(int *arr, int size, int value)
+{
+    int low = 0, high = size;
+    while (low < high)
+    {
+        int mid = (low + high) / 2;
+        if (arr[mid] <= value)
+        {
+            low = mid + 1;
+        }
+        else
+        {
+            high = mid;
+        }
+    }
+    return low;
 }
 
 int main()
 {
-    bool allTrue = true;
-
-    // Test a range of values for d and f
-    double testDoubles[] = {0.0, 1.0, -1.0, std::numeric_limits<double>::max(), std::numeric_limits<double>::min(), std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity(), std::nan("")};
-    float testFloats[] = {0.0f, 1.0f, -1.0f, std::numeric_limits<float>::max(), std::numeric_limits<float>::min(), std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(), std::nanf("")};
-
-    for (double d : testDoubles)
+    int n;
+    scanf("%d", &n);
+    int *cases = new int[n];
+    for (int i = 0; i < n; ++i)
     {
-        for (float f : testFloats)
+        scanf("%d", &cases[i]);
+    }
+
+    int *m = new int[n];
+    for (int i = 0; i < n; ++i)
+    {
+        scanf("%d", &m[i]);
+    }
+
+    int *d = new int[n];
+    int *queap = new int[n];
+    int front = 0, back = 0;
+
+    // Calculate d_i using a monotonic deque
+    for (int i = 0; i < n; ++i)
+    {
+        if (front < back && queap[front] <= i - m[i])
         {
-            if (!testExpression(d, f))
-            {
-                allTrue = false;
-                std::cout << "Expression failed for d = " << d << ", f = " << f << std::endl;
-            } 
+            ++front;
         }
+
+        while (front < back && cases[queap[back - 1]] <= cases[i])
+        {
+            --back;
+        }
+
+        queap[back++] = i;
+        d[i] = cases[queap[front]];
     }
 
-    if (allTrue)
+    for (int i = 0; i < n; i++)
     {
-        std::cout << "The expression holds true for all tested double and float values." << std::endl;
+        printf("%d\n", d[i]);
     }
-    else
+
+    // Sort d to make threshold querying efficient
+    qsort(d, n, sizeof(int), compare);
+
+    int T;
+    scanf("%d", &T);
+    for (int t = 0; t < T; ++t)
     {
-        std::cout << "The expression does not hold true for all tested double and float values." << std::endl;
+        int p, q;
+        scanf("%d%d", &p, &q);
+
+        // Use binary search to find the counts
+        int lowRiskCount = upper_bound(d, n, p - 1) + 1;
+        int mediumRiskCount = upper_bound(d, n, q - 1) + 1 - lowRiskCount;
+
+        printf("%d %d\n", lowRiskCount, mediumRiskCount);
     }
+
+    delete[] cases;
+    delete[] m;
+    delete[] d;
+    delete[] queap;
 
     return 0;
 }
