@@ -133,18 +133,24 @@ void moveSubtree(int sLen, int *sPath, int dLen, int *dPath, int k)
     if (parent->fir == s) // If `s` is the first child
     {
         parent->fir = s->sib;
-        s->sib->pre = nullptr;
+        if (s->sib)
+            s->sib->pre = nullptr;
     }
     else // Traverse to find `s` in siblings
     {
         s->pre->sib = s->sib;
         if (s->sib)
-        {
             s->sib->pre = s->pre;
-        }
     }
     s->sib = nullptr;
     s->pre = nullptr;
+
+    if (pre)
+    {
+        updateAncestors(pre);
+    }
+    else
+        updateFromParent(parent);
 
     TreeNode *d = findNode(dLen, dPath);
     s->par = d; // Set new parent
@@ -173,10 +179,6 @@ void moveSubtree(int sLen, int *sPath, int dLen, int *dPath, int k)
 
     // Update sizes and heights of affected ancestors
     updateAncestors(s);
-    if (pre)
-        updateAncestors(pre);
-    else
-        updateFromParent(parent);
 }
 
 // Queries height of a node
@@ -195,7 +197,6 @@ int main()
 {
     int N, M;
     scanf("%d %d", &N, &M);
-    printf("a");
 
     // Build the tree from input
     for (int i = 1; i <= N; i++)
@@ -220,11 +221,9 @@ int main()
             }
         }
     }
-    printf("a");
 
     // Initialize sizes and heights for all nodes in the tree
     init(&nodes[1]);
-    printf("a");
 
     // Process each operation
     for (int i = 0; i < M; i++)
@@ -243,10 +242,8 @@ int main()
             for (int j = 0; j < dLen; ++j)
                 scanf("%d", &dPath[j]);
             scanf("%d", &k);
-            printf("a");
 
             moveSubtree(sLen, sPath, dLen, dPath, k);
-            printf("a");
         }
         else // Query operation
         {
