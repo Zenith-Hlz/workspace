@@ -95,8 +95,16 @@ void updateAncestors(TreeNode *node)
 
 void updateFromParent(TreeNode *node)
 {
-    node->size = 1;
-    node->height = 0;
+    if (!node->fir)
+    {
+        node->size = 1;
+        node->height = 0;
+    }
+    else
+    {
+        node->size = node->fir->suffixSize + 1;
+        node->height = node->fir->suffixHeight + 1;
+    }
     updateAncestors(node);
 }
 
