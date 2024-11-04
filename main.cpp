@@ -2,69 +2,102 @@
 
 struct TreeNode
 {
-    int size;      // Size of subtree rooted at this node
-    int height;    // Height of subtree rooted at this node
-    TreeNode *fir; // Pointer to the first child node
-    TreeNode *sib; // Pointer to the next sibling node
-    TreeNode *par; // Pointer to the parent node
+    int size;   // Size of subtree rooted at this node
+    int height; // Height of subtree rooted at this node
+    int suffixSize;
+    int suffixHeight; // Max height considering sibling nodes
+    TreeNode *fir;    // Pointer to the first child node
+    TreeNode *sib;    // Pointer to the next sibling node
+    TreeNode *par;    // Pointer to the parent node
+    TreeNode *pre;
 
     // Constructor to initialize each TreeNode with default values
-    TreeNode() : size(1), height(0), fir(nullptr), sib(nullptr), par(nullptr) {}
+    TreeNode() : size(1), height(0), suffixSize(1), suffixHeight(0), fir(nullptr), sib(nullptr), par(nullptr), pre(nullptr) {}
 };
 
-const int MAXN = 1000009;
+const int MAXN = 1000001;
 TreeNode nodes[MAXN];
 
 // Function to calculate subtree size and height recursively for a given node
-int composeSizeAndHeight(TreeNode *node)
+void init(TreeNode *node)
 {
-    if (!node->fir) // If node has no children, it is a leaf
+    if ((!node->fir) && (!node->sib)) // If node has no children, it is a leaf
     {
         node->size = 1;
         node->height = 0;
-        return node->height;
+        node->suffixSize = 1;
+        node->suffixHeight = 0;
+        return;
     }
 
-    int newHeight = 0, newSize = 1;
-    TreeNode *child = node->fir;
-    while (child) // Traverse all children of the current node
+    if (!node->fir)
     {
-        int childHeight = composeSizeAndHeight(child);
-        newSize += child->size;          // Accumulate size of each child subtree
-        if (childHeight + 1 > newHeight) // Update height if needed
-            newHeight = childHeight + 1;
-        child = child->sib; // Move to the next sibling
+        init(node->sib);
+        node->size = 1;
+        node->height = 0;
+        node->suffixSize = node->sib->suffixSize + 1;
+        node->suffixHeight = node->sib->suffixHeight;
+        return;
     }
 
-    node->size = newSize; // Update size and height of the current node
-    node->height = newHeight;
-    return node->height;
+    if (!node->sib)
+    {
+        init(node->fir);
+        node->size = node->fir->suffixSize + 1;
+        node->height = node->fir->suffixHeight + 1;
+        node->suffixSize = node->size;
+        node->suffixHeight = node->height;
+        return;
+    }
+
+    init(node->sib);
+    init(node->fir);
+    node->size = node->fir->suffixSize + 1;
+    node->height = node->fir->suffixHeight + 1;
+    node->suffixSize = node->sib->suffixSize + node->size;
+    node->suffixHeight = (node->height > node->sib->suffixHeight) ? node->height : node->sib->suffixHeight;
+    return;
+}
+
+void updatePre(TreeNode *node)
+{
+    while (true)
+    {
+        if (!node->sib)
+        {
+            node->suffixSize = node->size;
+            node->suffixHeight = node->height;
+        }
+        else
+        {
+            node->suffixSize = node->sib->suffixSize + node->size;
+            node->suffixHeight = (node->height > node->sib->suffixHeight) ? node->height : node->sib->suffixHeight;
+        }
+        if (!node->pre)
+            break;
+        node = node->pre;
+    }
 }
 
 // Function to update the size and height of ancestors after a subtree move
 void updateAncestors(TreeNode *node)
 {
-    while (node) // Traverse up from the given node to the root
+    while (true) // Traverse up from the given node to the root
     {
-        int newHeight = 0, newSize = 1;
-        if (node->fir)
-        {
-            TreeNode *child = node->fir;
-            while (child)
-            {
-                newSize += child->size;
-                if ((child->height + 1) > newHeight)
-                    newHeight = child->height + 1;
-                child = child->sib;
-            }
-        }
-        // If both size and height match the expected values, no further updates needed
-        if (node->size == newSize && node->height == newHeight)
+        updatePre(node);
+        if (!node->par)
             break;
-        node->size = newSize;
-        node->height = newHeight;
-        node = node->par; // Move to the parent
+        node = node->par;
+        node->size = node->fir->suffixSize + 1;
+        node->height = node->fir->suffixHeight + 1;
     }
+}
+
+void updateFromParent(TreeNode *node)
+{
+    node->size = 1;
+    node->height = 0;
+    updateAncestors(node);
 }
 
 // Finds a node given a path of child indices
@@ -94,22 +127,24 @@ void moveSubtree(int sLen, int *sPath, int dLen, int *dPath, int k)
     TreeNode *s = findNode(sLen, sPath);
     TreeNode *parent = s->par;
 
+    TreeNode *pre = (s->pre) ? s->pre : nullptr;
+
     // Detach `s` from its current position in the parent's child list
     if (parent->fir == s) // If `s` is the first child
     {
         parent->fir = s->sib;
+        s->sib->pre = nullptr;
     }
     else // Traverse to find `s` in siblings
     {
-        TreeNode *child = parent->fir;
-        while (child && child->sib != s)
+        s->pre->sib = s->sib;
+        if (s->sib)
         {
-            child = child->sib;
+            s->sib->pre = s->pre;
         }
-        if (child)
-            child->sib = s->sib; // Detach `s`
     }
     s->sib = nullptr;
+    s->pre = nullptr;
 
     TreeNode *d = findNode(dLen, dPath);
     s->par = d; // Set new parent
@@ -119,6 +154,8 @@ void moveSubtree(int sLen, int *sPath, int dLen, int *dPath, int k)
     {
         s->sib = d->fir;
         d->fir = s;
+        if (s->sib)
+            s->sib->pre = s;
     }
     else
     {
@@ -129,11 +166,17 @@ void moveSubtree(int sLen, int *sPath, int dLen, int *dPath, int k)
         }
         s->sib = child->sib;
         child->sib = s;
+        s->pre = child;
+        if (s->sib)
+            s->sib->pre = s;
     }
 
     // Update sizes and heights of affected ancestors
-    updateAncestors(d);
-    updateAncestors(parent);
+    updateAncestors(s);
+    if (pre)
+        updateAncestors(pre);
+    else
+        updateFromParent(parent);
 }
 
 // Queries height of a node
@@ -152,6 +195,7 @@ int main()
 {
     int N, M;
     scanf("%d %d", &N, &M);
+    printf("a");
 
     // Build the tree from input
     for (int i = 1; i <= N; i++)
@@ -171,13 +215,16 @@ int main()
                 scanf("%d", &child);
                 current->sib = &nodes[child];
                 nodes[child].par = &nodes[i];
+                nodes[child].pre = current;
                 current = current->sib;
             }
         }
     }
+    printf("a");
 
     // Initialize sizes and heights for all nodes in the tree
-    composeSizeAndHeight(&nodes[1]);
+    init(&nodes[1]);
+    printf("a");
 
     // Process each operation
     for (int i = 0; i < M; i++)
@@ -196,8 +243,10 @@ int main()
             for (int j = 0; j < dLen; ++j)
                 scanf("%d", &dPath[j]);
             scanf("%d", &k);
+            printf("a");
 
             moveSubtree(sLen, sPath, dLen, dPath, k);
+            printf("a");
         }
         else // Query operation
         {
