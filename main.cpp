@@ -2,7 +2,6 @@
 #include <vector>
 #include <stack>
 #include <tuple>
-#include <cmath>
 #include <algorithm>
 
 using namespace std;
@@ -10,7 +9,6 @@ using namespace std;
 struct Point
 {
     int x, y;
-    bool isReflex; // Indicates if this point is a reflex vertex
     bool chain = 0;
 
     bool operator<(const Point &other) const
