@@ -1,87 +1,115 @@
+#include <iostream>
 #include <vector>
-#include <algorithm>
 #include <stack>
-#include <stdio.h>
+#include <tuple>
+#include <cmath>
+#include <algorithm>
+
 using namespace std;
 
 struct Point
 {
     int x, y;
+    bool isReflex; // Indicates if this point is a reflex vertex
+    bool chain = 0;
+
     bool operator<(const Point &other) const
     {
-        return x < other.x || (x == other.x && y < other.y);
+        return x < other.x;
     }
 };
 
-int orientation(const Point &p, const Point &q, const Point &r)
+vector<Point> points;                                  // Store polygon points
+vector<tuple<int, int, int, int, int, int>> triangles; // Store the triangles
+
+// Cross product to determine orientation of three points
+int crossProduct(const Point &A, const Point &B, const Point &C)
 {
-    // Cross product calculation for orientation
-    int val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-    if (val == 0)
-        return 0;             // collinear
-    return (val > 0) ? 1 : 2; // clock or counterclock wise
+    return (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
 }
 
-void triangulate(const vector<Point> &vertices, int n)
+void classifyChain(int n)
 {
-    vector<int> lower_chain, upper_chain;
-    stack<int> st;
+    // Find the iterators to the minimum and maximum element based on x value
+    auto min_iter = std::min_element(points.begin(), points.end());
+    int min_index = std::distance(points.begin(), min_iter);
 
-    // Sort vertices
-    vector<pair<Point, int>> points;
-    for (int i = 0; i < n; ++i)
-        points.push_back({vertices[i], i});
+    auto max_iter = std::max_element(points.begin(), points.end());
+    int max_index = std::distance(points.begin(), max_iter);
+
+    if (min_index <= max_index)
+    {
+        // Points from min_index to max_index are on the upper chain
+        for (int i = min_index; i <= max_index; ++i)
+        {
+            points[i].chain = 1;
+        }
+    }
+    else
+    {
+        // Polygon wraps around: min_index to end and begin to max_index form the upper chain
+        for (int i = min_index; i < n; ++i)
+        {
+            points[i].chain = 1;
+        }
+        for (int i = 0; i <= max_index; ++i)
+        {
+            points[i].chain = 1;
+        }
+    }
+}
+
+// Generate triangles based on the stack's reflex chain
+void addTriangle(const Point &a, const Point &b, const Point &c)
+{
+    triangles.emplace_back(a.x, a.y, b.x, b.y, c.x, c.y);
+}
+
+void triangulateXMonotonePolygon(int n)
+{
+    stack<Point> S;
+
     sort(points.begin(), points.end());
 
-    // Initialize chains
     for (int i = 0; i < n; ++i)
     {
-        if (points[i].second == 0 || points[i].second == n - 1)
-            continue;
-        if (orientation(points[0].first, points[n - 1].first, points[i].first) == 1)
-            upper_chain.push_back(points[i].second);
-        else
-            lower_chain.push_back(points[i].second);
-    }
+        Point &curr = points[i];
 
-    st.push(points[0].second);
-    st.push(points[1].second);
-
-    for (int i = 2; i < n; ++i)
-    {
-        int curr = points[i].second;
-        bool is_upper = find(upper_chain.begin(), upper_chain.end(), curr) != upper_chain.end();
-
-        if (is_upper != (find(upper_chain.begin(), upper_chain.end(), st.top()) != upper_chain.end()))
+        // Case 1: Different chain
+        if (!S.empty() && S.top().chain != curr.chain)
         {
-            // Different chain: connect all stack elements to `curr`
-            while (st.size() > 1)
+            Point t = S.top();
+            while (S.size() > 1)
             {
-                int top = st.top();
-                st.pop();
-                printf("%d %d ", vertices[curr].x, vertices[curr].y);
-                printf("%d %d ", vertices[top].x, vertices[top].y);
-                printf("%d %d\n", vertices[st.top()].x, vertices[st.top()].y);
+                Point prev = S.top();
+                S.pop();
+                addTriangle(S.top(), prev, curr);
             }
-            st.pop();
-            st.push(points[i - 1].second);
-            st.push(curr);
+            S.pop();
+            S.push(t);
+            S.push(curr);
         }
         else
         {
-            // Same chain
-            int last = st.top();
-            st.pop();
-            while (!st.empty() && orientation(vertices[curr], vertices[last], vertices[st.top()]) != 2)
+            // Case 2: Same chain
+            while (S.size() >= 2)
             {
-                printf("%d %d ", vertices[curr].x, vertices[curr].y);
-                printf("%d %d ", vertices[last].x, vertices[last].y);
-                printf("%d %d\n", vertices[st.top()].x, vertices[st.top()].y);
-                last = st.top();
-                st.pop();
+                Point top1 = S.top();
+                S.pop();
+                Point top2 = S.top();
+
+                // Determine if we need to add a diagonal
+                if (crossProduct(top2, top1, curr) <= 0)
+                {
+                    addTriangle(top2, top1, curr);
+                }
+                else
+                {
+                    S.push(top1);
+                    break;
+                }
             }
-            st.push(last);
-            st.push(curr);
+            S.push(curr);
         }
     }
 }
@@ -89,12 +117,22 @@ void triangulate(const vector<Point> &vertices, int n)
 int main()
 {
     int n;
-    scanf("%d", &n);
-    vector<Point> vertices(n);
+    cin >> n;
+    points.resize(n);
+
     for (int i = 0; i < n; ++i)
     {
-        scanf("%d %d", &vertices[i].x, &vertices[i].y);
+        cin >> points[i].x >> points[i].y;
     }
-    triangulate(vertices, n);
+
+    classifyChain(n);
+    triangulateXMonotonePolygon(n);
+
+    // Output triangles
+    for (const auto &[x1, y1, x2, y2, x3, y3] : triangles)
+    {
+        cout << x1 << " " << y1 << " " << x2 << " " << y2 << " " << x3 << " " << y3 << "\n";
+    }
+
     return 0;
 }
