@@ -6,51 +6,61 @@
 
 using namespace std;
 
+// Define a structure to store a point's coordinates and identify its chain
 struct Point
 {
-    int x, y;
-    bool chain = 0;
+    long long x, y;
+    bool chain = 0; // 0 represents upper chain and 1 represents lower chain by default
 
+    // Operator overload for sorting points based on their x-coordinates
     bool operator<(const Point &other) const
     {
         return x < other.x;
     }
 };
 
-vector<Point> points;                                  // Store polygon points
-vector<tuple<int, int, int, int, int, int>> triangles; // Store the triangles
+// Global vectors to store the polygon points and the resulting triangles
+vector<Point> points;
+vector<tuple<long long, long long, long long, long long, long long, long long>> triangles;
 
-// Cross product to determine orientation of three points
-int crossProduct(const Point &A, const Point &B, const Point &C)
+// Function to compute the cross product of vectors AB and AC
+long long crossProduct(const Point &A, const Point &B, const Point &C)
 {
-    return (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
+    long long dx1 = B.x - A.x;
+    long long dy1 = B.y - A.y;
+    long long dx2 = C.x - A.x;
+    long long dy2 = C.y - A.y;
+
+    long long cross_product = dx1 * dy2 - dy1 * dx2;
+
+    return cross_product;
 }
 
-void classifyChain(int n)
+// Classify points into upper and lower chains for the given polygon
+void classify(long long n)
 {
     // Find the iterators to the minimum and maximum element based on x value
     auto min_iter = std::min_element(points.begin(), points.end());
-    int min_index = std::distance(points.begin(), min_iter);
+    long long min_index = std::distance(points.begin(), min_iter);
 
     auto max_iter = std::max_element(points.begin(), points.end());
-    int max_index = std::distance(points.begin(), max_iter);
+    long long max_index = std::distance(points.begin(), max_iter);
 
+    // Determine which points are on the lower chain
     if (min_index <= max_index)
     {
-        // Points from min_index to max_index are on the upper chain
-        for (int i = min_index; i <= max_index; ++i)
+        for (long long i = min_index; i <= max_index; ++i)
         {
             points[i].chain = 1;
         }
     }
     else
     {
-        // Polygon wraps around: min_index to end and begin to max_index form the upper chain
-        for (int i = min_index; i < n; ++i)
+        for (long long i = min_index; i < n; ++i)
         {
             points[i].chain = 1;
         }
-        for (int i = 0; i <= max_index; ++i)
+        for (long long i = 0; i <= max_index; ++i)
         {
             points[i].chain = 1;
         }
@@ -63,25 +73,29 @@ void addTriangle(const Point &a, const Point &b, const Point &c)
     triangles.emplace_back(a.x, a.y, b.x, b.y, c.x, c.y);
 }
 
-void triangulateXMonotonePolygon(int n)
+// Triangulate a given x-monotone polygon
+void triangulateXMonotonePolygon(long long n)
 {
-    stack<Point> S;
+    stack<Point> S; // A stack to manage points during triangulation
 
+    // Sort points by their x-coordinates to prepare for traversal
     sort(points.begin(), points.end());
 
-    for (int i = 0; i < n; ++i)
+    // Loop through each point in the sorted array
+    for (long long i = 0; i < n; ++i)
     {
         Point &curr = points[i];
 
-        // Case 1: Different chain
+        // Case 1: The current point is on a different chain than the stack top
         if (!S.empty() && S.top().chain != curr.chain)
         {
+            // Save the stack top
             Point t = S.top();
             while (S.size() > 1)
             {
                 Point prev = S.top();
                 S.pop();
-                addTriangle(S.top(), prev, curr);
+                addTriangle(S.top(), prev, curr); // Form triangles
             }
             S.pop();
             S.push(t);
@@ -89,15 +103,15 @@ void triangulateXMonotonePolygon(int n)
         }
         else
         {
-            // Case 2: Same chain
+            // Case 2: The current point is on the same chain as the stack top
             while (S.size() >= 2)
             {
                 Point top1 = S.top();
                 S.pop();
                 Point top2 = S.top();
 
-                // Determine if we need to add a diagonal
-                if (crossProduct(top2, top1, curr) <= 0)
+                // Check if a valid diagonal can be drawn
+                if ((curr.chain && crossProduct(top2, top1, curr) > 0) || (!curr.chain && crossProduct(top2, top1, curr) < 0))
                 {
                     addTriangle(top2, top1, curr);
                 }
@@ -107,29 +121,30 @@ void triangulateXMonotonePolygon(int n)
                     break;
                 }
             }
-            S.push(curr);
+            S.push(curr); // Add current point to the stack
         }
     }
 }
 
 int main()
 {
-    int n;
-    cin >> n;
-    points.resize(n);
+    long long n;
+    scanf("%lld", &n);
 
-    for (int i = 0; i < n; ++i)
+    points.resize(n); // Resize the points vector to hold all input points
+
+    for (long long i = 0; i < n; ++i)
     {
-        cin >> points[i].x >> points[i].y;
+        scanf("%lld %lld", &points[i].x, &points[i].y);
     }
 
-    classifyChain(n);
-    triangulateXMonotonePolygon(n);
+    classify(n);                    // Classify points into upper and lower chains
+    triangulateXMonotonePolygon(n); // Triangulate the polygon
 
     // Output triangles
     for (const auto &[x1, y1, x2, y2, x3, y3] : triangles)
     {
-        cout << x1 << " " << y1 << " " << x2 << " " << y2 << " " << x3 << " " << y3 << "\n";
+        printf("%lld %lld %lld %lld %lld %lld\n", x1, y1, x2, y2, x3, y3);
     }
 
     return 0;
