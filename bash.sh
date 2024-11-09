@@ -1,1 +1,1 @@
-./main < input.txt > output.txt
+./main < .in > .out
