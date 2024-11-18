@@ -1,104 +1,51 @@
 #include <iostream>
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
 
 using namespace std;
 
-char a[4000000];
-int m, len;
-
-void error(const char *msg)
-{
-    printf("[Error] %s\n", msg);
-    exit(1);
-}
-
-void check_initial_sequence()
-{
-    if (len < 0 || 500000 < len)
-    {
-        error("Invalid initial length.");
-    }
-
-    char last_color = '\0';
-    int last_counter = 0;
-    for (int i = 0; i < len; ++i)
-    {
-        if (a[i] < 'A' || 'Z' < a[i])
-        {
-            printf("%d %c\n", i, a[i]);
-            error("Invalid color in initial sequence.");
-        }
-        if (a[i] == last_color)
-        {
-            ++last_counter;
-            if (last_counter == 3)
-            {
-                error("Erasure should not happen in initial sequence.");
-            }
-        }
-        else
-        {
-            last_color = a[i];
-            last_counter = 1;
-        }
-    }
-}
-
-void play(int t)
-{
-    int l = t - 1, r = t + 1;
-    while (l >= 0 && a[l] == a[t])
-        --l;
-    while (r < len && a[r] == a[t])
-        ++r;
-    if (r - l > 3)
-    {
-        memmove(a + l + 1, a + r, len - r + 1);
-        len -= (r - l - 1);
-        if (l >= 0)
-            play(l);
-    }
-}
+const int MAX_LENGTH = 50; // The maximum piece length as per problem statement
 
 int main()
 {
-    fgets(a, 4000000, stdin);
-    len = strlen(a);
-    --len;
-    a[len] = '\0';
-    check_initial_sequence();
+    while (true)
+    {
+        int n;
+        cin >> n;
+        if (n == 0)
+            break; // Stop input when '0' is encountered
 
-    if (scanf("%d", &m) != 1)
-    {
-        error("Read #operations error.");
-    }
-    if (!(0 <= m && m <= 500000))
-    {
-        error("Invalid #operations.");
-    }
-    while (m--)
-    {
-        char col;
-        int pos;
-        if (scanf("%d %c", &pos, &col) != 2)
+        int lengths[MAX_LENGTH + 1] = {0}; // Array to count lengths
+
+        // Read lengths into the counting array
+        for (int i = 0; i < n; ++i)
         {
-            error("Operation format error.");
+            int piece_length;
+            cin >> piece_length;
+            lengths[piece_length]++; // Increment count of this length
         }
-        if (pos > len)
+
+        // Finding the minimum possible original length
+        int min_length = MAX_LENGTH; // Start with the max possible stick length
+        for (int target_length = 1; target_length <= MAX_LENGTH; ++target_length)
         {
-            error("Invalid rank to insert.");
+            int total_pieces = 0;
+            for (int length = 1; length <= MAX_LENGTH; ++length)
+            {
+                total_pieces += lengths[length]; // Total pieces of all lengths
+            }
+
+            // Check if we can form sticks of 'target_length'
+            int required_sticks = total_pieces / target_length;
+            if (required_sticks * target_length == total_pieces)
+            {
+                min_length = target_length; // Found a feasible original length
+                break;                      // We stop at the smallest length
+            }
         }
-        if (col < 'A' || 'Z' < col)
-        {
-            error("Invalid color to insert.");
-        }
-        memmove(a + pos + 1, a + pos, len - pos + 1);
-        a[pos] = col;
-        ++len;
-        play(pos);
+
+        // Output the minimum possible original length
+        cout << min_length << endl;
     }
-    puts(a);
+
     return 0;
 }
