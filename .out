@@ -1,26 +1,2 @@
-Inserting 1 at position 0;
-Real position: 0;
-Inserting 2 at position 0;
-Real position: 0;
-Current node: 1; Left size: 0;
-Going left; Updating node 1;
-Node 1: left size 0, right size 0;
-Updating node 2;
-Node 2: left size 0, right size 1;
-Updating node 1;
-Node 1: left size 0, right size 0;
-Updating node 2;
-Node 2: left size 0, right size 1;
-Inserting 3 at position 2;
-Real position: 0;
-Current node: 2; Left size: 0;
-Going left; Updating node 2;
-Node 2: left size 0, right size 1;
-Updating node 3;
-Node 3: left size 0, right size 2;
-Updating node 2;
-Node 2: left size 0, right size 1;
-Updating node 3;
-Node 3: left size 0, right size 2;
-3
-3 2 1 
+2
+2 1 
