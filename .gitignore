@@ -1,5 +1,5 @@
 main
 main.o
 
-.in
-.out
+input.txt
+output.txt
