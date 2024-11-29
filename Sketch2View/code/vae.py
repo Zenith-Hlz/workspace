@@ -30,21 +30,21 @@ def save_and_show_figure(name):
 class Encoder(nn.Module):
     def __init__(self, img_size, latent_dim):
         super(Encoder, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=2, padding=1)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1)  
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1) 
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1) 
+        self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
 
-        self.fc_mu = nn.Linear(64 * img_size*img_size//64, latent_dim)
-        self.fc_logvar = nn.Linear(64 * img_size*img_size//64, latent_dim)
+        self.fc_mu = nn.Linear(256 * (img_size // 16) * (img_size // 16), latent_dim)
+        self.fc_logvar = nn.Linear(256 * (img_size // 16) * (img_size // 16), latent_dim)
 
     def forward(self, x):
-        
         x = torch.relu(self.conv1(x))
         x = torch.relu(self.conv2(x))
         x = torch.relu(self.conv3(x))
+        x = torch.relu(self.conv4(x))
         
-        x = x.view(x.size(0),-1)
-        
+        x = x.view(x.size(0), -1)
         mu = self.fc_mu(x)
         logvar = self.fc_logvar(x)
         return mu, logvar
@@ -53,17 +53,22 @@ class Decoder(nn.Module):
     def __init__(self, img_size, latent_dim):
         super(Decoder, self).__init__()
         self.img_size = img_size
-        self.fc = nn.Linear(latent_dim, 64 *img_size*img_size//64)
-        self.deconv1 = nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, output_padding=1)
-        self.deconv2 = nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=1, output_padding=1)
-        self.deconv3 = nn.ConvTranspose2d(16, 1, kernel_size=3, stride=2, padding=1, output_padding=1)
+
+        self.fc = nn.Linear(latent_dim, 256 * (img_size // 16) * (img_size // 16))
+
+        self.deconv1 = nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, output_padding=1)
+        self.deconv2 = nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1)
+        self.deconv3 = nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, output_padding=1)
+        self.deconv4 = nn.ConvTranspose2d(32, 1, kernel_size=3, stride=2, padding=1, output_padding=1)
 
     def forward(self, z):
         x = torch.relu(self.fc(z))
-        x = x.view(x.size(0), 64, self.img_size//8, self.img_size//8)
+        x = x.view(x.size(0), 256, self.img_size // 16, self.img_size // 16)
+
         x = torch.relu(self.deconv1(x))
         x = torch.relu(self.deconv2(x))
-        x = torch.sigmoid(self.deconv3(x))
+        x = torch.relu(self.deconv3(x))
+        x = torch.sigmoid(self.deconv4(x))
         return x
 
 class VAE(torch.nn.Module):
