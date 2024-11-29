@@ -1,8 +1,4 @@
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
-using namespace std;
 
 int N, M;
 
@@ -53,42 +49,42 @@ struct SplayTree
         return node ? node->size : 0;
     }
 
-    // Rotation operation: rotate node x up to the position of its parent y
-    void rotate(Node *x)
+    // Rotation operation: rotate node node up to the position of its parent p
+    void rotate(Node *node)
     {
-        Node *y = x->parent;
-        Node *z = y->parent;
+        Node *p = node->parent;
+        Node *g = p->parent;
 
-        // If x is the left child of y, move x's right subtree to y's left
-        if (x == y->left)
+        // Rotate the node up to the position of its parent
+        if (node == p->left)
         {
-            y->left = x->right;
-            if (x->right)
-                x->right->parent = y;
-            x->right = y;
+            p->left = node->right;
+            if (node->right)
+                node->right->parent = p;
+            node->right = p;
         }
-        else // If x is the right child of y
+        else
         {
-            y->right = x->left;
-            if (x->left)
-                x->left->parent = y;
-            x->left = y;
+            p->right = node->left;
+            if (node->left)
+                node->left->parent = p;
+            node->left = p;
         }
 
-        y->parent = x;
-        x->parent = z;
+        p->parent = node;
+        node->parent = g;
 
-        // If z is not null (i.e., y is not the root)
-        if (z)
+        // Update the grandparent's child pointer
+        if (g)
         {
-            if (z->left == y)
-                z->left = x;
+            if (g->left == p)
+                g->left = node;
             else
-                z->right = x;
+                g->right = node;
         }
 
-        update(y);
-        update(x);
+        update(p);
+        update(node);
     }
 
     // Splay operation: splay the node x to the root of the tree
@@ -159,6 +155,8 @@ struct SplayTree
         Node *node = root;
         while (true)
         {
+            pushDown(node); // Push down the reverse flag
+
             int leftSize = getSize(node->left);
             // If the position is less than or equal to the size of the left subtree
             if (pos <= leftSize)
@@ -189,7 +187,7 @@ struct SplayTree
     }
 
     // Rotate all dancers
-    void rotateAll(int r)
+    void rotate(int r)
     {
         // Update the rotation offset
         rotation_offset = (rotation_offset + r) % getSize(root);
@@ -364,7 +362,8 @@ int main()
     {
         char operation;
         int x, y;
-        scanf("%c", &operation);
+        scanf(" %c", &operation); // Add a space before %c to consume the newline character
+
         if (operation == 'I')
         {
             scanf("%d %d", &x, &y);
@@ -378,7 +377,7 @@ int main()
         else if (operation == 'R')
         {
             scanf("%d", &x);
-            tree.rotateAll(x);
+            tree.rotate(x);
         }
         else if (operation == 'F')
         {
@@ -393,72 +392,3 @@ int main()
 
     return 0;
 }
-
-/*
-## 题目描述
-在苏格兰舞会上，人们会围圈跳舞，并由主持人带领进行着队形变换。舞会期间，不断会有新人加入。主持人确定所有变换之后，希望预先知道，一曲终了时的队形将会如何。
-
-人们在舞圈里的位置，自正门处逆时针从 0 开始这个编号，从最初至终的舞圈开始，反复做下列四种队形变换：
-
-* **I x p**: 代号为整数 x 的舞者，加入到舞圈中 p-1 号与 p 号舞者之间，编号取作 p，原 p 至 n-1 号舞者的编号各自加一，其中 0 ≤ p ≤ n，n为当前的舞者总数。特别地，如果 p = n，则 x 将插到 n-1 号与 0 号之间，编号取作 n，原先舞者的编号均保持不变；如果 p = 0，则 x 将插到 0 号与 n-1 号之间，编号取作 0，原先的所有舞者编号各自加一；
-
-* **S i j**: i 号舞者与 j 号交换位置。0 ≤ i,j < n；
-
-* **R r**: 舞圈整体顺时针旋转 r 次，r ∈ Z，舞者的编号（在模 n 意义下）各自增加 r 个单位。当然，若 r < 0，则相当于逆时针旋转，所有编号减少一个单位；
-
-* **F i j**: i 至 j 号舞者整体区间翻转，0 ≤ i,j < n。这里的区间是就循环意义而言的，以 n = 7 为例，若舞者代号依次为 a,b,c,d,e,f,g，则在做过 F14 翻转后，代号序列将转成 a,e,d,c,b,f,g；而在做过 F41 翻转后，代号序列将转成 f,e,c,d,b,a,g。
-
-## 输入格式
-第一行有两个正整数：N 为最终的舞者总数，M 为队形变换的总次数。接下来的 M 行，按照上述格式逐一列出各次变换。S,R,F 操作保证当时的舞圈不空，i,j 总是当前舞圈中的合法位置。
-
-## 输出格式
-仅一行，按最终次序逐个列出舞者代号。
-
-## 输入样例
-
-```plain
-5 20
-I 4399 0
-I 1024 1
-R -1
-S 0 1
-I 7777 1
-R 20
-S 1 2
-F 2 0
-F 0 1
-F 1 0
-I 1111 0
-I 2048 4
-S 1 3
-R -3
-F 0 2
-F 3 0
-S 0 0
-S 1 4
-F 3 2
-R 2
-```
-
-## 输出样例
-
-```plain
-1024 4399 7777 2048 1111
-```
-
-## 限制
-
-1 ≤ N ≤ M ≤ 500,000, x, r 不超出 int 数据类型能表示的范围
-
-时间: 1.5 sec
-
-空间: 256 MB
-
-## 提示
-
-第2，3点提示对复杂度没有实质性的影响，不必须按这两点思路解题。
-
-- 伸展树(splay)
-- 思考如何在 O(1) 时间内完成 R 操作
-- 思考如何避免对树的 split/merge 操作
-*/
