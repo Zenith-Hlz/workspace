@@ -53,7 +53,7 @@ struct SplayTree
     void rotate(Node *node)
     {
         Node *p = node->parent;
-        Node *g = p->parent;
+        Node *g = p ? p->parent : nullptr;
 
         // Rotate the node up to the position of its parent
         if (node == p->left)
@@ -312,13 +312,21 @@ struct SplayTree
     {
         if (node && node->rev)
         {
-            // Swap the left and right children
-            swap(getIndex(node->left), getIndex(node->right));
-            if (node->left)
-                node->left->rev ^= 1;
-            if (node->right)
-                node->right->rev ^= 1;
-            node->rev = 0; // Clear the reverse flag
+            Node *l = node->left;
+            Node *r = node->right;
+
+            // Swap children
+            node->left = r;
+            node->right = l;
+
+            // Propagate reverse flag
+            if (l)
+                l->rev ^= 1;
+            if (r)
+                r->rev ^= 1;
+
+            // Clear the flag
+            node->rev = 0;
         }
     }
 
