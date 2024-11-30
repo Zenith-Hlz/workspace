@@ -16,9 +16,10 @@ struct SplayTree
 
     Node *root;
     int rotation_offset; // This tracks the overall rotation of the circle
+    int count;           // This tracks the number of dancers in the tree
 
     // The constructor initializes the root node and the rotation offset
-    SplayTree() : root(nullptr), rotation_offset(0) {}
+    SplayTree() : root(nullptr), rotation_offset(0), count(0) {}
 
     int getIndex(Node *node)
     {
@@ -141,6 +142,7 @@ struct SplayTree
     // Insert operation: insert a new node with a specific value at a given position
     void insert(int value, int pos)
     {
+        count += 1;
         // Adjust the logical position to the actual position
         pos = getRealPosition(pos);
 
@@ -190,18 +192,17 @@ struct SplayTree
     void rotate(int r)
     {
         // Update the rotation offset
-        rotation_offset = (rotation_offset + r) % getSize(root);
+        rotation_offset = (rotation_offset + r) % count;
     }
 
     // Get the actual position of the node
     int getRealPosition(int pos)
     {
-        int n = getSize(root);
-        if (n == 0)
+        if (count == 0)
             return 0; // Avoid division/modulus by zero
 
-        // Adjust the position based on the rotation offset
-        return (pos - rotation_offset + n) % n;
+          // Adjust the position based on the rotation offset
+        return (pos - rotation_offset + count) % count;
     }
 
     // Swap operation：swap the values of two nodes
@@ -221,7 +222,7 @@ struct SplayTree
 
     void reverse(int i, int j)
     {
-        int n = getSize(root); // Total number of nodes
+        int n = count; // Total number of nodes
         if (n == 0)
             return;
 
@@ -394,7 +395,7 @@ int main()
         }
     }
 
-    printf("%d\n", tree.getSize(tree.root));
+    printf("%d\n", tree.count);
     // Output the final result
     tree.print();
 
