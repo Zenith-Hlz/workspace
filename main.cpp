@@ -201,7 +201,9 @@ struct SplayTree
         if (count == 0)
             return 0; // Avoid division/modulus by zero
 
-          // Adjust the position based on the rotation offset
+        // Adjust the position based on the rotation offset
+        if (pos - rotation_offset == count)
+            return count;
         return (pos - rotation_offset + count) % count;
     }
 
