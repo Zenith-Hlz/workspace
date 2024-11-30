@@ -142,9 +142,18 @@ struct SplayTree
     // Insert operation: insert a new node with a specific value at a given position
     void insert(int value, int pos)
     {
-        count += 1;
+        bool isBeforeRotationOffset;
+        if (pos < rotation_offset)
+            isBeforeRotationOffset = true;
+        else
+            isBeforeRotationOffset = false;
+
         // Adjust the logical position to the actual position
         pos = getRealPosition(pos);
+
+        if (isBeforeRotationOffset)
+            rotation_offset += 1;
+        count += 1;
 
         // If the tree is empty, create a new node as the root
         if (!root)
@@ -191,8 +200,12 @@ struct SplayTree
     // Rotate all dancers
     void rotate(int r)
     {
-        // Update the rotation offset
+        // Update the rotation offset and ensure it is positive
         rotation_offset = (rotation_offset + r) % count;
+        if (rotation_offset < 0)
+        {
+            rotation_offset += count;
+        }
     }
 
     // Get the actual position of the node
@@ -207,107 +220,107 @@ struct SplayTree
         return (pos - rotation_offset + count) % count;
     }
 
-    // Swap operation：swap the values of two nodes
+    // Swap operation: swap the values of two nodes at given positions
     void swap(int i, int j)
     {
-        // First find the corresponding positions using the splay tree
-        Node *node_i = find(getRealPosition(i));
-        Node *node_j = find(getRealPosition(j));
-        if (node_i && node_j)
-        {
-            // Swap the values of the two nodes
-            int temp = node_i->val;
-            node_i->val = node_j->val;
-            node_j->val = temp;
-        }
-    }
+        if (i == j)
+            return; // If the indices are the same, no swap is needed.
 
-    void reverse(int i, int j)
-    {
-        int n = count; // Total number of nodes
-        if (n == 0)
+        // Normalize indices considering rotation and handle wrap-around using getRealPosition
+        int real_i = getRealPosition(i);
+        int real_j = getRealPosition(j);
+
+        // First find the corresponding positions using the splay tree and splay them to the root
+        Node *node_i = find(real_i);
+        splay(node_i); // Splay the first node to the root
+
+        Node *node_j = find(real_j);
+        splay(node_j); // Splay the second node to the root
+
+        // If either node is null (which should not happen in proper usage), do nothing
+        if (!node_i || !node_j)
             return;
 
-        // Adjust for real positions considering rotation offset
+        // Swap the values of the two nodes
+        int temp = node_i->val;
+        node_i->val = node_j->val;
+        node_j->val = temp;
+
+        // Optionally, re-splay one of the nodes to keep tree balanced
+        splay(node_i); // Keep the first node at the root to optimize further accesses
+    }
+
+    // Reverse operation: reverse the order of the nodes in the range [i, j]
+    void reverse(int i, int j)
+    {
+        if (count == 0)
+            return; // No elements to reverse if the tree is empty
+
+        // Normalize indices considering rotation and wrap around
         i = getRealPosition(i);
         j = getRealPosition(j);
 
+        if (i == j)
+            return; // Single element reversal is meaningless
+
         if (i > j)
         {
-            // If i > j, reverse from i to n-1, and then 0 to j
-            reverse(i, n - 1);
-            reverse(0, j);
+            // Wrap around case: Reverse [i, end] and [start, j]
+            splay(find(i)); // Make i the root
+            if (root->right)
+            {
+                pushDown(root->right); // Apply pending reversals if any
+                root->right->rev ^= 1; // Toggle the reverse flag
+            }
+
+            splay(find(j)); // Make j the root
+            if (root->right)
+            {
+                pushDown(root->right); // Apply pending reversals if any
+                root->right->rev ^= 1; // Toggle the reverse flag
+            }
         }
         else
         {
-            // Find the [i, j] range in the splay tree
-            Node *left = nullptr, *middle = nullptr, *right = nullptr;
-
-            // Split the tree into three parts: [0, i-1], [i, j], and [j+1, n-1]
-            split(root, i, left, middle);
-            split(middle, j - i + 1, middle, right);
-
-            // Toggle the reverse flag for the middle part
-            if (middle)
-                middle->rev ^= 1;
-
-            // Merge the parts back together
-            root = merge(merge(left, middle), right);
+            // Direct case: Reverse [i, j]
+            splay(find(i)); // Splay i to the root
+            Node *temp = root->right;
+            if (temp)
+            {
+                splay(findAtRelative(j - i, temp)); // Splay j to be the right child of the root
+                if (root->right->left)
+                {
+                    pushDown(root->right->left); // Apply pending reversals if any
+                    root->right->left->rev ^= 1; // Toggle the reverse flag
+                }
+            }
         }
     }
 
-    // Helper function: split the tree into two parts at position `pos`
-    // Result: `left` contains [0, pos-1], `right` contains [pos, n-1]
-    void split(Node *node, int pos, Node *&left, Node *&right)
+    // Helper function to find a node at a relative position in a subtree
+    Node *findAtRelative(int relPos, Node *start)
     {
-        if (!node)
+        int index = relPos;
+        Node *node = start;
+        while (node)
         {
-            left = right = nullptr;
-            return;
+            pushDown(node); // Always respect pending operations
+            int leftSize = getSize(node->left);
+            if (index == leftSize)
+            {
+                return node;
+            }
+            else if (index < leftSize)
+            {
+                node = node->left;
+            }
+            else
+            {
+                index -= leftSize + 1;
+                node = node->right;
+            }
         }
-
-        splay(find(pos)); // Splay the node at `pos` to the root
-        if (!root)
-            return;
-        if (pos <= getSize(node->left))
-        {
-            right = node;
-            left = node->left;
-            if (left)
-                left->parent = nullptr;
-            right->left = nullptr;
-            update(right);
-        }
-        else
-        {
-            left = node;
-            right = node->right;
-            if (right)
-                right->parent = nullptr;
-            left->right = nullptr;
-            update(left);
-        }
-    }
-
-    // Helper function: merge two trees `left` and `right`
-    Node *merge(Node *left, Node *right)
-    {
-        if (!left)
-            return right;
-        if (!right)
-            return left;
-
-        // Splay the largest node of the left tree
-        Node *maxLeft = left;
-        while (maxLeft->right)
-            maxLeft = maxLeft->right;
-        splay(maxLeft);
-
-        // Attach the right tree to the left tree
-        maxLeft->right = right;
-        right->parent = maxLeft;
-        update(maxLeft);
-        return maxLeft;
+        return nullptr;
     }
 
     // Helper function: push down the reverse flag to child nodes
@@ -342,13 +355,14 @@ struct SplayTree
 
         inorder(root, result, index);
 
-        for (int i = 0; i < index; i++)
-        {
+        for (int i = count - rotation_offset; i < count; i++)
             printf("%d ", result[i]);
-        }
+        for (int i = 0; i < count - rotation_offset; i++)
+            printf("%d ", result[i]);
+
         printf("\n");
 
-        delete[] result; // Free memory
+        delete[] result;
     }
 
     // In-order traversal to output the result
@@ -356,6 +370,7 @@ struct SplayTree
     {
         if (!node)
             return;
+        pushDown(node); // Ensure the reverse flag is handled
         inorder(node->left, result, index);
         result[index++] = node->val;
         inorder(node->right, result, index);
