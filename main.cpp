@@ -397,7 +397,6 @@ int main()
         }
     }
 
-    printf("%d\n", tree.count);
     // Output the final result
     tree.print();
 
