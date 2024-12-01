@@ -324,7 +324,7 @@ struct SplayTree
         else
         {
             rearrangeTree(initial_i);      // Reverse the order of the nodes in the range [i, count-1] and [0, j-1]
-            reverse(initial_j, initial_i); // Reverse the order of the nodes in the range [j, i]
+            reverse(initial_i, initial_j); // Reverse the order of the nodes in the range [j, i]
         }
     }
 
@@ -362,6 +362,8 @@ struct SplayTree
     {
         Node *first = split(root, i - 1);
         merge(first, root);
+
+        rotation_offset = (rotation_offset + i) % count;
     }
 
     Node *findMax(Node *node)
