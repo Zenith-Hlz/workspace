@@ -292,6 +292,8 @@ struct SplayTree
         if (count == 0)
             return; // No elements to reverse if the tree is empty
 
+        int initial_i = i;
+
         // Normalize indices considering rotation and wrap around
         i = getRealPosition(i);
         j = getRealPosition(j);
@@ -320,9 +322,6 @@ struct SplayTree
         }
         else
         {
-            // Wrap-around case: Reverse [i, N-1] and [0, j]
-            reverse(i, count - 1);
-            reverse(0, j);
         }
     }
 
