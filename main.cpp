@@ -22,14 +22,23 @@ struct SplayTree
     // The constructor initializes the root node and the rotation offset
     SplayTree() : root(nullptr), rotation_offset(0) {}
 
+    // Get the size of the node
+    int getSize(Node *node)
+    {
+        return node ? node->size : 0;
+    }
+
     // Get the index of the node in the tree
     int getIndex(Node *node)
     {
         if (!node)
             return 0;
+
+        pushDown(node);                  // Ensure the reverse flag is handled
         int index = getSize(node->left); // Size of the left subtree
         while (node->parent)
         {
+            pushDown(node->parent); // Ensure the reverse flag is handled
             if (node == node->parent->right)
                 index += getSize(node->parent->left) + 1; // Add parent's left size + 1
             node = node->parent;
@@ -44,10 +53,18 @@ struct SplayTree
             node->size = 1 + getSize(node->left) + getSize(node->right);
     }
 
-    // Get the size of the node
-    int getSize(Node *node)
+    // Get the actual position of the node
+    int getRealPosition(int pos)
     {
-        return node ? node->size : 0;
+        if (!root)
+            return 0; // Avoid division/modulus by zero
+
+        int size = getSize(root);
+
+        // Adjust the position based on the rotation offset
+        if (pos - rotation_offset == size)
+            return size;
+        return (pos - rotation_offset + size) % size;
     }
 
     // Rotation operation: rotate node node up to the position of its parent p
@@ -94,34 +111,34 @@ struct SplayTree
     }
 
     // Splay operation: splay the node x to the root of the tree
-    void splay(Node *x)
+    void splay(Node *node)
     {
         // Continue until x becomes the root (i.e., x has no parent)
-        while (x->parent)
+        while (node->parent)
         {
-            Node *p = x->parent;
+            Node *p = node->parent;
             Node *g = p->parent;
 
             // If p is the root
             if (!g)
             {
-                rotate(x); // Perform a single rotation
+                rotate(node); // Perform a single rotation
             }
-            else if ((x == p->left) == (p == g->left)) // If x and p are both left or both right children
+            else if ((node == p->left) == (p == g->left)) // If x and p are both left or both right children
             {
                 // Perform a rotation on p (zig-zig or zag-zag case)
                 rotate(p);
-                rotate(x);
+                rotate(node);
             }
             else // If x and p are on opposite sides (one is a left child, the other is a right child)
             {
                 // Perform a rotation on x (zig-zag or zag-zig case)
-                rotate(x);
-                rotate(x);
+                rotate(node);
+                rotate(node);
             }
         }
 
-        root = x;
+        root = node;
     }
 
     // Splay to child: splay the node x to the child of root, without moving root itself
@@ -244,20 +261,6 @@ struct SplayTree
         }
     }
 
-    // Get the actual position of the node
-    int getRealPosition(int pos)
-    {
-        if (!root)
-            return 0; // Avoid division/modulus by zero
-
-        int size = getSize(root);
-
-        // Adjust the position based on the rotation offset
-        if (pos - rotation_offset == size)
-            return size;
-        return (pos - rotation_offset + size) % size;
-    }
-
     // Swap operation: swap the values of two nodes at given positions
     void swap(int i, int j)
     {
@@ -330,13 +333,16 @@ struct SplayTree
         }
     }
 
-    Node *split(Node *root, int k)
+    // Split operation: split the tree into two parts at the k-th node
+    Node *split(int k)
     {
         if (!root)
             return nullptr;
 
         Node *node = find(k);
         splay(node); // Brings the k-th node to the root
+
+        pushDown(node); // Ensure the reverse flag is handled
         Node *right = node->right;
         if (right)
             right->parent = nullptr; // Disconnect the right subtree
@@ -346,6 +352,7 @@ struct SplayTree
         return right;                // Return the right subtree, the left subtree remains with the original root
     }
 
+    // Merge operation: merge two trees by attaching the right tree to the maximum node of the left tree
     void merge(Node *left, Node *right)
     {
         if (!left)
@@ -360,10 +367,11 @@ struct SplayTree
         this->root = maxNode; // Update the root of the tree
     }
 
+    // Rearrange the tree by splitting at i and merging the two parts
     void rearrangeTree(int i)
     {
-        Node *first = split(root, i - 1);
-        merge(first, root);
+        Node *right = split(i - 1);
+        merge(right, root);
 
         rotation_offset = (rotation_offset + i) % getSize(root);
     }
@@ -373,6 +381,7 @@ struct SplayTree
         if (!node)
             return nullptr; // Handle the case where the tree is empty.
 
+        pushDown(node);
         // Traverse to the rightmost node, which has the maximum key value.
         while (node->right)
         {
