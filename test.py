@@ -1,12 +1,13 @@
 from collections import deque
 
-def scottish_dance(n, m, operations):
+
+def scottish_dance(operations):
     # Initialize the circle as a deque
     circle = deque()
-    
+
     for operation in operations:
         op = operation.split()
-        if op[0] == 'I':  # Insert operation
+        if op[0] == "I":  # Insert operation
             x = int(op[1])  # Dancer ID
             p = int(op[2])  # Position
             if p == 0:  # Insert at the beginning
@@ -15,18 +16,18 @@ def scottish_dance(n, m, operations):
                 circle.append(x)
             else:  # Insert in between
                 circle.insert(p, x)
-        elif op[0] == 'S':  # Swap operation
+        elif op[0] == "S":  # Swap operation
             i = int(op[1])
             j = int(op[2])
             circle[i], circle[j] = circle[j], circle[i]
-        elif op[0] == 'R':  # Rotate operation
+        elif op[0] == "R":  # Rotate operation
             r = int(op[1])
             circle.rotate(r)
-        elif op[0] == 'F':  # Flip operation
+        elif op[0] == "F":  # Flip operation
             i = int(op[1])
             j = int(op[2])
             length = len(circle)
-            
+
             if i <= j:
                 # Straightforward reversal
                 while i < j:
@@ -42,7 +43,7 @@ def scottish_dance(n, m, operations):
                     idx = (idx + 1) % length
                     if idx == (j + 1) % length:
                         break
-                
+
                 # Reverse the extracted segment
                 temp.reverse()
 
@@ -54,9 +55,10 @@ def scottish_dance(n, m, operations):
 
     return list(circle)
 
+
 # Input processing
 if __name__ == "__main__":
     n, m = map(int, input().split())
     operations = [input().strip() for _ in range(m)]
-    result = scottish_dance(n, m, operations)
+    result = scottish_dance(operations)
     print(" ".join(map(str, result)))

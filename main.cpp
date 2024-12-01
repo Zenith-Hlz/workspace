@@ -56,6 +56,10 @@ struct SplayTree
         Node *p = node->parent;
         Node *g = p ? p->parent : nullptr;
 
+        // Pushdown pending operations
+        pushDown(p);
+        pushDown(node);
+
         // Rotate the node up to the position of its parent
         if (node == p->left)
         {
@@ -117,6 +121,35 @@ struct SplayTree
         }
 
         root = x;
+    }
+
+    // Splay to child: splay the node x to the child of root, without moving root itself
+    void splayToChild(Node *x)
+    {
+        // Continue until x becomes the child of the root
+        while (x->parent != root)
+        {
+            Node *p = x->parent;
+            Node *g = p->parent;
+
+            // If g is the root
+            if (g == root)
+            {
+                rotate(x); // Perform a single rotation
+            }
+            else if ((x == p->left) == (p == g->left)) // If x and p are both left or both right children
+            {
+                // Perform a rotation on p (zig-zig or zag-zag case)
+                rotate(p);
+                rotate(x);
+            }
+            else // If x and p are on opposite sides (one is a left child, the other is a right child)
+            {
+                // Perform a rotation on x (zig-zag or zag-zig case)
+                rotate(x);
+                rotate(x);
+            }
+        }
     }
 
     // Find operation: find and return the node with a specific value
@@ -235,11 +268,15 @@ struct SplayTree
         splay(node_i); // Splay the first node to the root
 
         Node *node_j = find(real_j);
-        splay(node_j); // Splay the second node to the root
+        splayToChild(node_j); // Splay the second node to the root
 
         // If either node is null (which should not happen in proper usage), do nothing
         if (!node_i || !node_j)
             return;
+
+        // Pushdown pending operations
+        pushDown(node_i);
+        pushDown(node_j);
 
         // Swap the values of the two nodes
         int temp = node_i->val;
@@ -263,64 +300,22 @@ struct SplayTree
         if (i == j)
             return; // Single element reversal is meaningless
 
-        if (i > j)
-        {
-            // Wrap around case: Reverse [i, end] and [start, j]
-            splay(find(i)); // Make i the root
-            if (root->right)
-            {
-                pushDown(root->right); // Apply pending reversals if any
-                root->right->rev ^= 1; // Toggle the reverse flag
-            }
-
-            splay(find(j)); // Make j the root
-            if (root->right)
-            {
-                pushDown(root->right); // Apply pending reversals if any
-                root->right->rev ^= 1; // Toggle the reverse flag
-            }
-        }
-        else
+        if (i < j)
         {
             // Direct case: Reverse [i, j]
             splay(find(i)); // Splay i to the root
             Node *temp = root->right;
             if (temp)
             {
-                splay(findAtRelative(j - i, temp)); // Splay j to be the right child of the root
+                splayToChild(find(j)); // Splay j to be the right child of the root
                 if (root->right->left)
                 {
                     pushDown(root->right->left); // Apply pending reversals if any
                     root->right->left->rev ^= 1; // Toggle the reverse flag
                 }
             }
+            swap(i, j); // Swap the two nodes to reverse the range
         }
-    }
-
-    // Helper function to find a node at a relative position in a subtree
-    Node *findAtRelative(int relPos, Node *start)
-    {
-        int index = relPos;
-        Node *node = start;
-        while (node)
-        {
-            pushDown(node); // Always respect pending operations
-            int leftSize = getSize(node->left);
-            if (index == leftSize)
-            {
-                return node;
-            }
-            else if (index < leftSize)
-            {
-                node = node->left;
-            }
-            else
-            {
-                index -= leftSize + 1;
-                node = node->right;
-            }
-        }
-        return nullptr;
     }
 
     // Helper function: push down the reverse flag to child nodes
