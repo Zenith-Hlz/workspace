@@ -2,8 +2,10 @@
 
 int N, M;
 
+// Splay Tree implementation
 struct SplayTree
 {
+    // The Node structure represents a node in the splay tree
     struct Node
     {
         int val, size;
@@ -16,10 +18,9 @@ struct SplayTree
 
     Node *root;
     int rotation_offset; // This tracks the overall rotation of the circle
-    int count;           // This tracks the number of dancers in the tree
 
     // The constructor initializes the root node and the rotation offset
-    SplayTree() : root(nullptr), rotation_offset(0), count(0) {}
+    SplayTree() : root(nullptr), rotation_offset(0) {}
 
     // Get the index of the node in the tree
     int getIndex(Node *node)
@@ -189,7 +190,6 @@ struct SplayTree
 
         if (isBeforeRotationOffset)
             rotation_offset += 1;
-        count += 1;
 
         // If the tree is empty, create a new node as the root
         if (!root)
@@ -237,23 +237,25 @@ struct SplayTree
     void rotate(int r)
     {
         // Update the rotation offset and ensure it is positive
-        rotation_offset = (rotation_offset + r) % count;
+        rotation_offset = (rotation_offset + r) % getSize(root);
         if (rotation_offset < 0)
         {
-            rotation_offset += count;
+            rotation_offset += getSize(root);
         }
     }
 
     // Get the actual position of the node
     int getRealPosition(int pos)
     {
-        if (count == 0)
+        if (!root)
             return 0; // Avoid division/modulus by zero
 
+        int size = getSize(root);
+
         // Adjust the position based on the rotation offset
-        if (pos - rotation_offset == count)
-            return count;
-        return (pos - rotation_offset + count) % count;
+        if (pos - rotation_offset == size)
+            return size;
+        return (pos - rotation_offset + size) % size;
     }
 
     // Swap operation: swap the values of two nodes at given positions
@@ -289,7 +291,7 @@ struct SplayTree
     // Reverse operation: reverse the order of the nodes in the range [i, j]
     void reverse(int i, int j)
     {
-        if (count == 0)
+        if (!root)
             return; // No elements to reverse if the tree is empty
 
         int initial_i = i;
@@ -323,8 +325,8 @@ struct SplayTree
         }
         else
         {
-            rearrangeTree(initial_i);      // Reverse the order of the nodes in the range [i, count-1] and [0, j-1]
-            reverse(initial_i, initial_j); // Reverse the order of the nodes in the range [j, i]
+            rearrangeTree(initial_i);
+            reverse(initial_i, initial_j);
         }
     }
 
@@ -363,7 +365,7 @@ struct SplayTree
         Node *first = split(root, i - 1);
         merge(first, root);
 
-        rotation_offset = (rotation_offset + i) % count;
+        rotation_offset = (rotation_offset + i) % getSize(root);
     }
 
     Node *findMax(Node *node)
@@ -413,6 +415,8 @@ struct SplayTree
         int index = 0;
 
         inorder(root, result, index);
+
+        int count = getSize(root);
 
         for (int i = count - rotation_offset; i < count; i++)
             printf("%d ", result[i]);
@@ -470,11 +474,6 @@ int main()
             tree.reverse(x, y);
         }
     }
-
-    // SplayTree::Node *first = tree.split(tree.root, 2);
-    // tree.merge(first, tree.root);
-
-    // tree.rearrangeTree(2);
 
     // Output the final result
     tree.print();
