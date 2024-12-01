@@ -21,6 +21,7 @@ struct SplayTree
     // The constructor initializes the root node and the rotation offset
     SplayTree() : root(nullptr), rotation_offset(0), count(0) {}
 
+    // Get the index of the node in the tree
     int getIndex(Node *node)
     {
         if (!node)
@@ -39,9 +40,7 @@ struct SplayTree
     void update(Node *node)
     {
         if (node)
-        {
             node->size = 1 + getSize(node->left) + getSize(node->right);
-        }
     }
 
     // Get the size of the node
@@ -57,6 +56,7 @@ struct SplayTree
         Node *g = p ? p->parent : nullptr;
 
         // Pushdown pending operations
+        pushDown(g);
         pushDown(p);
         pushDown(node);
 
@@ -158,6 +158,9 @@ struct SplayTree
         Node *node = root;
         while (node)
         {
+            // Pushdown pending operations
+            pushDown(node);
+
             int leftSize = getSize(node->left);
             if (pos == leftSize)
                 return node;
@@ -274,10 +277,6 @@ struct SplayTree
         if (!node_i || !node_j)
             return;
 
-        // Pushdown pending operations
-        pushDown(node_i);
-        pushDown(node_j);
-
         // Swap the values of the two nodes
         int temp = node_i->val;
         node_i->val = node_j->val;
@@ -303,18 +302,16 @@ struct SplayTree
         if (i < j)
         {
             // Direct case: Reverse [i, j]
-            splay(find(i)); // Splay i to the root
-            Node *temp = root->right;
-            if (temp)
+            splay(find(i));        // Splay i to the root
+            splayToChild(find(j)); // Splay j to be the right child of the root
+            if (root->right->left)
             {
-                splayToChild(find(j)); // Splay j to be the right child of the root
-                if (root->right->left)
-                {
-                    pushDown(root->right->left); // Apply pending reversals if any
-                    root->right->left->rev ^= 1; // Toggle the reverse flag
-                }
+                pushDown(root->right->left); // Apply pending reversals if any
+                root->right->left->rev ^= 1; // Toggle the reverse flag
             }
-            swap(i, j); // Swap the two nodes to reverse the range
+
+            // Swap i and j
+            swap(i, j);
         }
     }
 
