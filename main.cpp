@@ -293,6 +293,7 @@ struct SplayTree
             return; // No elements to reverse if the tree is empty
 
         int initial_i = i;
+        int initial_j = j;
 
         // Normalize indices considering rotation and wrap around
         i = getRealPosition(i);
@@ -322,7 +323,61 @@ struct SplayTree
         }
         else
         {
+            rearrangeTree(initial_i);      // Reverse the order of the nodes in the range [i, count-1] and [0, j-1]
+            reverse(initial_j, initial_i); // Reverse the order of the nodes in the range [j, i]
         }
+    }
+
+    Node *split(Node *root, int k)
+    {
+        if (!root)
+            return nullptr;
+
+        Node *node = find(k);
+        splay(node); // Brings the k-th node to the root
+        Node *right = node->right;
+        if (right)
+            right->parent = nullptr; // Disconnect the right subtree
+        node->right = nullptr;       // Cut off the right subtree from the root
+        update(node);                // Update sizes after split
+        this->root = node;           // Update the root of the tree
+        return right;                // Return the right subtree, the left subtree remains with the original root
+    }
+
+    void merge(Node *left, Node *right)
+    {
+        if (!left)
+            return;
+        if (!right)
+            return;
+        Node *maxNode = findMax(left);
+        splay(maxNode); // Splay the maximum element of the left tree to the root
+        maxNode->right = right;
+        right->parent = maxNode;
+        update(maxNode);
+        this->root = maxNode; // Update the root of the tree
+    }
+
+    void rearrangeTree(int i)
+    {
+        Node *first = split(root, i - 1);
+        merge(first, root);
+    }
+
+    Node *findMax(Node *node)
+    {
+        if (!node)
+            return nullptr; // Handle the case where the tree is empty.
+
+        // Traverse to the rightmost node, which has the maximum key value.
+        while (node->right)
+        {
+            pushDown(node); // Ensure the reverse flag is handled
+            node = node->right;
+        }
+
+        pushDown(node); // Ensure the reverse flag is handled for the rightmost node
+        return node;
     }
 
     // Helper function: push down the reverse flag to child nodes
@@ -413,6 +468,11 @@ int main()
             tree.reverse(x, y);
         }
     }
+
+    // SplayTree::Node *first = tree.split(tree.root, 2);
+    // tree.merge(first, tree.root);
+
+    // tree.rearrangeTree(2);
 
     // Output the final result
     tree.print();
