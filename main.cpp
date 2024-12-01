@@ -302,8 +302,11 @@ struct SplayTree
         if (i < j)
         {
             // Direct case: Reverse [i, j]
-            splay(find(i));        // Splay i to the root
-            splayToChild(find(j)); // Splay j to be the right child of the root
+            Node *node_i = find(i);
+            splay(node_i); // Splay i to the root
+            Node *node_j = find(j);
+            splayToChild(node_j); // Splay j to be the right child of the root
+
             if (root->right->left)
             {
                 pushDown(root->right->left); // Apply pending reversals if any
@@ -311,7 +314,15 @@ struct SplayTree
             }
 
             // Swap i and j
-            swap(i, j);
+            int temp = node_i->val;
+            node_i->val = node_j->val;
+            node_j->val = temp;
+        }
+        else
+        {
+            // Wrap-around case: Reverse [i, N-1] and [0, j]
+            reverse(i, count - 1);
+            reverse(0, j);
         }
     }
 
