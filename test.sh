@@ -13,29 +13,36 @@ for ((i=1; i<=num_runs; i++)); do
         exit 1
     fi
 
-    # Step 2: Run `test.py` using the generated `./input/input.txt` and save output to `./output/output_python.txt`
-    python3 test.py < ./input/input.txt > ./output/output_python.txt
+    # Step 2: Compile `test.cpp`
+    g++ -o test test.cpp
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to run test.py on run #$i"
+        echo "Error: Compilation of test.cpp failed on run #$i"
         exit 1
     fi
 
-    # Step 3: Compile `main.cpp`
+    # Step 3: Run `test` using `./input/input.txt` and save output to `./output/output_main.txt`
+    ./test < ./input/input.txt > ./output/output_test.txt
+    if [ $? -ne 0 ]; then
+        echo "Error: test.cpp encountered a runtime error on run #$i"
+        exit 1
+    fi
+
+    # Step 4: Compile `main.cpp`
     g++ -o main main.cpp
     if [ $? -ne 0 ]; then
         echo "Error: Compilation of main.cpp failed on run #$i"
         exit 1
     fi
 
-    # Step 4: Run `main` using `./input/input.txt` and save output to `./output/output_main.txt`
+    # Step 5: Run `main` using `./input/input.txt` and save output to `./output/output_main.txt`
     ./main < ./input/input.txt > ./output/output_main.txt
     if [ $? -ne 0 ]; then
         echo "Error: main.cpp encountered a runtime error on run #$i"
         exit 1
     fi
 
-    # Step 5: Compare outputs
-    if ! cmp -s ./output/output_python.txt ./output/output_main.txt; then
+    # Step 6: Compare outputs
+    if ! cmp -s ./output/output_test.txt ./output/output_main.txt; then
         echo "Error: Outputs are different on run #$i"
         exit 1
     fi
