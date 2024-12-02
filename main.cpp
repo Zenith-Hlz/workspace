@@ -5,26 +5,24 @@ const int MAXN = 200000;
 
 struct Operation
 {
-    char operation[2]; // 'H' for modify, 'Q' for query
-    int s, t;          // Interval boundaries
+    char operation; // 'H' for modify, 'Q' for query
+    int s, t;       // Interval boundaries
 } operations[MAXN];
 
-struct Interval
-{
-    int left, right; // Interval boundaries
-    Interval() {}
-    Interval(int l, int r) : left(l), right(r) {}
-} intervals[MAXN << 2];
+int boundaries[MAXN << 1];    // Store the interval boundaries
+int intervalLeft[MAXN << 2];  // Interval left boundaries
+int intervalRight[MAXN << 2]; // Interval right boundaries
 
+// Node structure for the segment tree
 struct Node
 {
-    int l, r;      // The range [l, r] represented by this node
-    long long sum; // Sum of flip counts in this range
-    int lazy;      // Lazy propagation marker
-    int len;       // Length of the range
-    Node *left, *right;
+    int start, end; // The range [start, end] represented by this node
+    int lazy;       // Lazy value for horizontal flip
+    int length;     // Length of the range
+    long long sum;  // Sum of flip counts in this range
+    Node *leftChild, *rightChild;
 
-    Node(int l, int r) : l(l), r(r), sum(0), lazy(0), left(nullptr), right(nullptr) {}
+    Node(int start, int end) : start(start), end(end), lazy(0), length(0), sum(0), leftChild(nullptr), rightChild(nullptr) {}
 };
 
 class SegmentTree
@@ -32,186 +30,237 @@ class SegmentTree
 private:
     Node *root;
 
+    // Helper functions for segment tree push down
+    void applyLazyUpdate(Node *child, int lazyValue)
+    {
+        if (child)
+        {
+            // Apply the lazy value to the child node
+            child->lazy += lazyValue;
+            child->sum += 1LL * child->length * lazyValue;
+        }
+    }
+
     // Propagate lazy value to children
     void pushDown(Node *node)
     {
         if (node->lazy)
         {
             // Apply lazy value to children
-            if (node->left)
-            {
-                node->left->lazy += node->lazy;
-                node->left->sum += 1LL * node->left->len * node->lazy;
-            }
-
-            if (node->right)
-            {
-                node->right->lazy += node->lazy;
-                node->right->sum += 1LL * node->right->len * node->lazy;
-            }
+            applyLazyUpdate(node->leftChild, node->lazy);
+            applyLazyUpdate(node->rightChild, node->lazy);
 
             // Clear lazy value for the current node
             node->lazy = 0;
         }
     }
 
-    void build(Node *node, int left, int right)
+    // Helper functions for segment tree build
+    void initializeChild(Node *&child, int rangeStart, int rangeEnd)
     {
-        node->l = left;
-        node->r = right;
-        if (left == right)
-        {
-            node->len = intervals[left].right - intervals[left].left + 1;
-            return;
-        }
-        int mid = (left + right) >> 1;
-        build(node->left = new Node(0, 0), left, mid);
-        build(node->right = new Node(0, 0), mid + 1, right);
-
-        node->len = (node->left ? node->left->len : 0) + (node->right ? node->right->len : 0);
+        child = new Node(0, 0);
+        build(child, rangeStart, rangeEnd); // Recursively build the child node
     }
 
-    // Update the range [ul, ur] by adding 1
-    void update(Node *node, int ul, int ur)
+    // Build the segment tree
+    void build(Node *node, int rangeStart, int rangeEnd)
     {
-        if (ul <= node->l && node->r <= ur)
+        // Initialize range for the current node
+        node->start = rangeStart;
+        node->end = rangeEnd;
+
+        // Base case: leaf node
+        if (rangeStart == rangeEnd)
         {
-            node->sum += 1LL * node->len;
+            node->length = intervalRight[rangeStart] - intervalLeft[rangeStart] + 1;
+            return;
+        }
+
+        // Calculate the midpoint of the current range
+        int midpoint = (rangeStart + rangeEnd) / 2;
+
+        // Recursively build left and right children
+        initializeChild(node->leftChild, rangeStart, midpoint);
+        initializeChild(node->rightChild, midpoint + 1, rangeEnd);
+
+        // Update the range length of the current node
+        node->length = node->leftChild->length + node->rightChild->length;
+    }
+
+    // Horizontal flip the range [updateStart, updateEnd]
+    void flip(Node *node, int updateStart, int updateEnd)
+    {
+        // If the current range is completely within [updateStart, updateEnd]
+        if (updateStart <= node->start && node->end <= updateEnd)
+        {
+            node->sum += 1LL * node->length;
             node->lazy++;
             return;
         }
 
+        // If the current range is completely outside [updateStart, updateEnd], skip it
+        if (node->end < updateStart || node->start > updateEnd)
+            return;
+
+        // Push lazy updates to children
         pushDown(node);
 
-        int mid = (node->l + node->r) / 2;
-        if (ul <= mid)
-        {
-            if (!node->left)
-                node->left = new Node(node->l, mid);
-            update(node->left, ul, ur);
-        }
-        if (ur > mid)
-        {
-            if (!node->right)
-                node->right = new Node(mid + 1, node->r);
-            update(node->right, ul, ur);
-        }
+        // Recursive updates on children
+        int midpoint = (node->start + node->end) / 2;
 
-        // Update current node's sum
-        node->sum = (node->left ? node->left->sum : 0) + (node->right ? node->right->sum : 0);
+        if (updateStart <= midpoint)
+            flip(node->leftChild, updateStart, updateEnd);
+        if (updateEnd > midpoint)
+            flip(node->rightChild, updateStart, updateEnd);
+
+        // Recalculate the sum after updates
+        node->sum = (node->leftChild ? node->leftChild->sum : 0) + (node->rightChild ? node->rightChild->sum : 0);
     }
 
-    // Query the sum in the range [ql, qr]
-    long long query(Node *node, int ql, int qr)
+    // Query the sum in the range [queryStart, queryEnd]
+    long long query(Node *node, int queryStart, int queryEnd)
     {
         if (!node)
-            return 0;
-        if (ql <= node->l && node->r <= qr)
+            return 0; // If the node is null, return 0
+
+        // If the current range is completely within [queryStart, queryEnd]
+        if (queryStart <= node->start && node->end <= queryEnd)
             return node->sum;
 
+        // If the current range is completely outside [queryStart, queryEnd], return 0
+        if (node->end < queryStart || node->start > queryEnd)
+            return 0;
+
+        // Push lazy updates to children
         pushDown(node);
 
-        int mid = (node->l + node->r) / 2;
-        long long res = 0;
-        if (ql <= mid && node->left)
-            res += query(node->left, ql, qr);
-        if (qr > mid && node->right)
-            res += query(node->right, ql, qr);
+        // Recursive query on children
+        int midpoint = (node->start + node->end) / 2;
+        long long leftSum = 0, rightSum = 0;
+        if (queryStart <= midpoint)
+            leftSum = query(node->leftChild, queryStart, queryEnd);
+        if (queryEnd > midpoint)
+            rightSum = query(node->rightChild, queryStart, queryEnd);
 
-        return res;
+        // Return the combined sum
+        return leftSum + rightSum;
     }
 
 public:
-    SegmentTree(int left, int right)
+    // Constructor for the segment tree
+    SegmentTree(int rangeStart, int rangeEnd)
     {
-        root = new Node(left, right);
-        build(root, left, right);
+        root = new Node(rangeStart, rangeEnd);
+        build(root, rangeStart, rangeEnd);
     }
 
-    void update(int ul, int ur)
+    // Horizontal flip the range [updateStart, updateEnd]
+    void flip(int updateStart, int updateEnd)
     {
-        update(root, ul, ur);
+        flip(root, updateStart, updateEnd);
     }
 
-    long long query(int ql, int qr)
+    // Query the sum in the range [queryStart, queryEnd]
+    long long query(int queryStart, int queryEnd)
     {
-        return query(root, ql, qr);
+        return query(root, queryStart, queryEnd);
     }
 };
 
+// Helper function to compare two integers for qsort
 int compare(const void *a, const void *b)
 {
     return *(int *)a - *(int *)b;
 }
 
-int main()
+// Parse input and read operations
+void readInput(int &numIntervals, int &numOperations)
 {
-    int n, m;
-    scanf("%d %d", &n, &m);
+    scanf("%d %d", &numIntervals, &numOperations);
 
-    int boundaries[MAXN << 1]; // Store the interval boundaries
     int totalBoundaries = 0;
-
-    // Read operations and boundaries
-    for (int i = 0; i < m; ++i)
+    for (int i = 0; i < numOperations; ++i)
     {
-        scanf(" %c %d %d", operations[i].operation, &operations[i].s, &operations[i].t);
+        scanf(" %c %d %d", &operations[i].operation, &operations[i].s, &operations[i].t);
         boundaries[totalBoundaries++] = operations[i].s;
         boundaries[totalBoundaries++] = operations[i].t;
     }
+}
 
-    // Sort and deduplicate boundaries
+// Deduplicate and sort boundaries
+int deduplicateBoundaries(int totalBoundaries)
+{
     qsort(boundaries, totalBoundaries, sizeof(int), compare);
-    int uniqueCount = 1; // At least one unique boundary
+
+    int uniqueCount = 1;
     for (int i = 1; i < totalBoundaries; ++i)
     {
         if (boundaries[i] != boundaries[uniqueCount - 1])
-        {
             boundaries[uniqueCount++] = boundaries[i];
-        }
     }
+    return uniqueCount;
+}
 
-    // Construct the intervals
+// Construct intervals from deduplicated boundaries
+int constructIntervals(int uniqueCount)
+{
     int numIntervals = 0;
-    for (int i = 0; i < uniqueCount; i++)
+    for (int i = 0; i < uniqueCount; ++i)
     {
-        intervals[++numIntervals] = Interval(boundaries[i], boundaries[i]);
+        intervalLeft[++numIntervals] = boundaries[i];
+        intervalRight[numIntervals] = boundaries[i];
+
         if (i < uniqueCount - 1 && boundaries[i + 1] - boundaries[i] > 1)
-            intervals[++numIntervals] = Interval(boundaries[i] + 1, boundaries[i + 1] - 1);
-    }
-
-    // Map boundaries to discrete indices
-    auto getRank = [&](int value)
-    {
-        int left = 1, right = numIntervals + 1;
-        while (left < right - 1)
         {
-            int mid = (left + right) >> 1;
-            if (intervals[mid].left <= value)
-                left = mid;
-            else
-                right = mid;
-        }
-        return left;
-    };
-
-    SegmentTree segTree(1, numIntervals);
-
-    // Process operations
-    for (int i = 0; i < m; ++i)
-    {
-        int s = getRank(operations[i].s);
-        int t = getRank(operations[i].t);
-
-        if (operations[i].operation[0] == 'H')
-        {
-            segTree.update(s, t); // Flip operation
-        }
-        else if (operations[i].operation[0] == 'Q')
-        {
-            printf("%lld\n", segTree.query(s, t)); // Query operation
+            intervalLeft[++numIntervals] = boundaries[i] + 1;
+            intervalRight[numIntervals] = boundaries[i + 1] - 1;
         }
     }
+    return numIntervals;
+}
+
+// Map a value to its discrete index
+int getRank(int value, int numIntervals)
+{
+    int left = 1, right = numIntervals + 1;
+    while (left < right - 1)
+    {
+        int mid = (left + right) / 2;
+        if (intervalLeft[mid] <= value)
+            left = mid;
+        else
+            right = mid;
+    }
+    return left;
+}
+
+// Process operations using the segment tree
+void processOperations(SegmentTree &segTree, int numOperations, int numIntervals)
+{
+    for (int i = 0; i < numOperations; ++i)
+    {
+        int startIndex = getRank(operations[i].s, numIntervals);
+        int endIndex = getRank(operations[i].t, numIntervals);
+
+        if (operations[i].operation == 'H')
+            segTree.flip(startIndex, endIndex); // Flip operation
+        else if (operations[i].operation == 'Q')
+            printf("%lld\n", segTree.query(startIndex, endIndex)); // Query operation
+    }
+}
+
+int main()
+{
+    int n, m;
+
+    readInput(n, m);
+
+    int uniqueCount = deduplicateBoundaries(m * 2);
+    n = constructIntervals(uniqueCount);
+
+    SegmentTree segTree(1, n);
+
+    processOperations(segTree, m, n);
 
     return 0;
 }

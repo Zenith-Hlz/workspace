@@ -3,176 +3,165 @@
 #include <cassert>
 #define LL long long
 
-const int MAX_SIZE = 2e5 + 5;
+const int M = 2e5 + 5;
 
-int numIntervals, numOperations, uniqueCount, rawBoundaries[MAX_SIZE << 1]; // numIntervals: number of intervals, numOperations: number of operations, uniqueCount: count of unique values, rawBoundaries: array to store interval boundaries
+int n, m, cnt, raw[M << 1];
 
 struct Operation
 {
-    char type[2];    // Operation type ('H' for modify, 'Q' for query)
-    int left, right; // Interval boundaries
-} operations[MAX_SIZE];
+    char opt[2];
+    int l, r;
+} q[M];
 
 struct Interval
 {
-    int left, right; // Interval boundaries
+    int l, r;
     Interval() {}
-    Interval(int l, int r) : left(l), right(r) {}
-} intervals[MAX_SIZE << 2];
+    Interval(int ll, int rr) : l(ll), r(rr) {}
+} itv[M << 2];
 
-LL segmentTreeSum[MAX_SIZE << 4];                                                                 // Segment tree to store sums
-int segmentTreeChildren[MAX_SIZE << 4][2], lazyAdd[MAX_SIZE << 4], intervalLength[MAX_SIZE << 4]; // Segment tree children, lazy propagation array, and interval lengths
+LL sum[M << 4];
+int ch[M << 4][2], add[M << 4], len[M << 4];
 
-// Update the current node based on its children
-void pushup(int node)
+void pushup(int x)
 {
-    segmentTreeSum[node] = segmentTreeSum[node << 1] + segmentTreeSum[node << 1 | 1];
-    intervalLength[node] = intervalLength[node << 1] + intervalLength[node << 1 | 1];
+    sum[x] = sum[x << 1] + sum[x << 1 | 1];
+    len[x] = len[x << 1] + len[x << 1 | 1];
 }
 
-// Propagate lazy updates to the children
-void pushdown(int node)
+void pushdown(int x)
 {
-    if (lazyAdd[node])
+    if (add[x])
     {
-        lazyAdd[node << 1] += lazyAdd[node];
-        lazyAdd[node << 1 | 1] += lazyAdd[node];
-        segmentTreeSum[node << 1] += 1LL * lazyAdd[node] * intervalLength[node << 1];
-        segmentTreeSum[node << 1 | 1] += 1LL * lazyAdd[node] * intervalLength[node << 1 | 1];
-        lazyAdd[node] = 0;
+        add[x << 1] += add[x];
+        add[x << 1 | 1] += add[x];
+        sum[x << 1] += 1LL * add[x] * len[x << 1];
+        sum[x << 1 | 1] += 1LL * add[x] * len[x << 1 | 1];
+        add[x] = 0;
     }
 }
 
-// Build the segment tree
-void build(int node, int left, int right)
+void build(int p, int l, int r)
 {
-    segmentTreeChildren[node][0] = left, segmentTreeChildren[node][1] = right;
-    if (left == right)
+    ch[p][0] = l, ch[p][1] = r;
+    if (l == r)
     {
-        intervalLength[node] = intervals[left].right - intervals[left].left + 1;
+        len[p] = itv[l].r - itv[l].l + 1;
         return;
     }
-    int mid = left + right >> 1;
-    build(node << 1, left, mid);
-    build(node << 1 | 1, mid + 1, right);
-    pushup(node);
+    int mid = l + r >> 1;
+    build(p << 1, l, mid);
+    build(p << 1 | 1, mid + 1, r);
+    pushup(p);
 }
 
-// Modify the segment tree within a specified range
-void modify(int node, int left, int right, int value)
+void modify(int p, int l, int r, int v)
 {
-    if (left <= segmentTreeChildren[node][0] && segmentTreeChildren[node][1] <= right)
+    if (l <= ch[p][0] && ch[p][1] <= r)
     {
-        lazyAdd[node] += value;
-        segmentTreeSum[node] += 1LL * value * intervalLength[node];
+        add[p] += v;
+        sum[p] += 1LL * v * len[p];
         return;
     }
-    pushdown(node);
-    int mid = segmentTreeChildren[node][0] + segmentTreeChildren[node][1] >> 1;
-    if (left <= mid)
-        modify(node << 1, left, right, value);
-    if (mid < right)
-        modify(node << 1 | 1, left, right, value);
-    pushup(node);
+    pushdown(p);
+    int mid = ch[p][0] + ch[p][1] >> 1;
+    if (l <= mid)
+        modify(p << 1, l, r, v);
+    if (mid < r)
+        modify(p << 1 | 1, l, r, v);
+    pushup(p);
 }
 
-// Query the sum within a specified range
-LL query(int node, int left, int right)
+LL query(int p, int l, int r)
 {
-    if (left <= segmentTreeChildren[node][0] && segmentTreeChildren[node][1] <= right)
-        return segmentTreeSum[node];
-    pushdown(node);
-    int mid = segmentTreeChildren[node][0] + segmentTreeChildren[node][1] >> 1;
-    LL result = 0;
-    if (left <= mid)
-        result += query(node << 1, left, right);
-    if (mid < right)
-        result += query(node << 1 | 1, left, right);
-    return result;
+    if (l <= ch[p][0] && ch[p][1] <= r)
+        return sum[p];
+    pushdown(p);
+    int mid = ch[p][0] + ch[p][1] >> 1;
+    LL ret = 0;
+    if (l <= mid)
+        ret += query(p << 1, l, r);
+    if (mid < r)
+        ret += query(p << 1 | 1, l, r);
+    return ret;
 }
 
-// Comparison function for qsort
-int compare(const void *a, const void *b)
+int cmp(const void *p1, const void *p2)
 {
-    return *(int *)a - *(int *)b;
+    return *(int *)p1 - *(int *)p2;
 }
 
-// Remove duplicates from the raw array
+// 去重
 void deduplicate()
 {
-    uniqueCount = 0;
-    qsort(rawBoundaries, 2 * numOperations, sizeof(int), compare);
-    for (int i = 0, j = 0; j < 2 * numOperations; i++)
+    cnt = 0;
+    qsort(raw, 2 * m, sizeof(int), cmp);
+    for (int i = 0, j = 0; j < 2 * m; i++)
     {
-        while (rawBoundaries[j] == rawBoundaries[i])
+        while (raw[j] == raw[i])
             j++;
-        rawBoundaries[i + 1] = rawBoundaries[j];
-        uniqueCount++;
+        raw[i + 1] = raw[j];
+        cnt++;
     }
 }
 
-// Binary search to find the rank of a value
-int search(int left, int right, int value)
+int search(int l, int r, int v)
 {
-    // Answer interval is [left, right)
-    while (left < right - 1)
+    // 答案区间为 [l, r)
+    while (l < r - 1)
     {
-        int mid = left + right >> 1;
-        if (intervals[mid].left <= value)
+        int mid = l + r >> 1;
+        if (itv[mid].l <= v)
         {
-            left = mid;
+            l = mid;
         }
         else
         {
-            right = mid;
+            r = mid;
         }
     }
-    return left;
+    return l;
 }
 
-// Get the rank of a value within the intervals
-int getRank(int value)
+int getRank(int v)
 {
-    return search(1, numIntervals + 1, value);
+    return search(1, n + 1, v);
 }
 
 int main()
 {
-    // Read the number of intervals and operations
-    scanf("%d %d", &numIntervals, &numOperations);
-    for (int i = 1; i <= numOperations; i++)
+
+    scanf("%d %d", &n, &m);
+    for (int i = 1; i <= m; i++)
     {
-        // Read each operation and store the interval boundaries
-        scanf("%s %d %d", operations[i].type, &operations[i].left, &operations[i].right);
-        rawBoundaries[i - 1 << 1] = operations[i].left;
-        rawBoundaries[i - 1 << 1 | 1] = operations[i].right;
+        char opt[2];
+        int l, r;
+        scanf("%s %d %d", q[i].opt, &q[i].l, &q[i].r);
+        raw[i - 1 << 1] = q[i].l;
+        raw[i - 1 << 1 | 1] = q[i].r;
     }
 
-    // Remove duplicates from the raw array
     deduplicate();
 
-    // Construct the intervals
-    numIntervals = 0;
-    for (int i = 0; i < uniqueCount; i++)
+    n = 0;
+    for (int i = 0; i < cnt; i++)
     {
-        intervals[++numIntervals] = Interval(rawBoundaries[i], rawBoundaries[i]);
-        if (i < uniqueCount - 1 && rawBoundaries[i + 1] - rawBoundaries[i] > 1)
-            intervals[++numIntervals] = Interval(rawBoundaries[i] + 1, rawBoundaries[i + 1] - 1);
+        itv[++n] = Interval(raw[i], raw[i]);
+        if (i < cnt - 1 && raw[i + 1] - raw[i] > 1)
+            itv[++n] = Interval(raw[i] + 1, raw[i + 1] - 1);
     }
 
-    // Build the segment tree
-    build(1, 1, numIntervals);
+    build(1, 1, n);
 
-    // Process each operation
-    for (int i = 1; i <= numOperations; i++)
+    for (int i = 1; i <= m; i++)
     {
-        int left = getRank(operations[i].left);
-        int right = getRank(operations[i].right);
+        int l = getRank(q[i].l);
+        int r = getRank(q[i].r);
 
-        if (operations[i].type[0] == 'H')
-            modify(1, left, right, 1); // Modify operation
-        else if (operations[i].type[0] == 'Q')
-            printf("%lld\n", query(1, left, right)); // Query operation
+        if (q[i].opt[0] == 'H')
+            modify(1, l, r, 1);
+        else if (q[i].opt[0] == 'Q')
+            printf("%lld\n", query(1, l, r));
     }
 
     return 0;
