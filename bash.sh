@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./main < input.txt > output.txt
+./main < ./input/input.txt > ./output/output.txt
