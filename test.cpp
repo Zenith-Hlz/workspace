@@ -142,7 +142,6 @@ int main()
     scanf("%d %d", &numIntervals, &numOperations);
     for (int i = 1; i <= numOperations; i++)
     {
-        char type[2];
         // Read each operation and store the interval boundaries
         scanf("%s %d %d", operations[i].type, &operations[i].left, &operations[i].right);
         rawBoundaries[i - 1 << 1] = operations[i].left;
