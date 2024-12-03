@@ -1,8 +1,16 @@
+.vscode
+
 main
 main.o
 test
 
 input
 output
+inputs
+results
 
-test.py
+*.txt
+*.in
+*.out
+
+*.csv

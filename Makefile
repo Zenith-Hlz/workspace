@@ -1,9 +1,9 @@
 CC = g++
 CFLAGS = -Wall -std=c++11
 
-SRCS = main.cpp
+SRCS = main.cpp hashtable.cpp
 OBJS = $(SRCS:.cpp=.o)
-HEADERS = 
+HEADERS = hashtable.h
 
 TARGET = main
 
