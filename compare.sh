@@ -3,6 +3,15 @@
 # Set the number of iterations
 read -p "Enter the number of times to run the script: " num_runs
 
+# Check if input and output directories exist, create them if they don't
+if [ ! -d "./input" ]; then
+    mkdir ./input
+fi
+
+if [ ! -d "./output" ]; then
+    mkdir ./output
+fi
+
 for ((i=1; i<=num_runs; i++)); do
     echo "Run #$i"
 
