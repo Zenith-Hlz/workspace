@@ -1,0 +1,16 @@
+.vscode
+
+main
+main.o
+test
+
+input
+output
+inputs
+results
+
+*.txt
+*.in
+*.out
+
+*.csv
