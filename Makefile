@@ -14,4 +14,4 @@ $(TARGET):$(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm $(OBJS) $(TARGET) gen test
+	rm -f $(OBJS) $(TARGET) gen test
