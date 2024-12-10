@@ -3,6 +3,7 @@
 main
 main.o
 test
+gen
 
 input
 output

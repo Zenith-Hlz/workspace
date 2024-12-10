@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <cassert>
 
 const int MAX_MELODY = 1500001;
 const int MAX_ALBUM = 1000001;
@@ -26,8 +27,6 @@ void getPrefixSuffix(int index)
         pre = melody[pre].prefixSuffix;
     if (melody[pre].melody == melody[index].melody)
         melody[index + 1].prefixSuffix = pre + 1;
-    
-    printf("prefixSuffix[%d] = %d\n", index, melody[index + 1].prefixSuffix);
 }
 
 // The function that calculates the non-overlapping prefix suffix of the melody
@@ -35,7 +34,7 @@ void getNonOverlappingPrefixSuffix(int index)
 {
     int pre = melody[index].nonOverlappingPrefixSuffix;
     // Adjust the prefix index if it reaches half of the current index
-    if (pre == index / 2)
+    if (pre == (index + 1) / 2)
         pre = melody[pre].prefixSuffix;
 
     // If the next note of the previous prefixsuffix is the same as the current note, adjust the prefix index
@@ -43,8 +42,6 @@ void getNonOverlappingPrefixSuffix(int index)
         pre = melody[pre].nonOverlappingPrefixSuffix;
     if (melody[pre].melody == melody[index].melody)
         melody[index + 1].nonOverlappingPrefixSuffix = pre + 1;
-
-    printf("nonOverlappingPrefixSuffix[%d] = %d\n", index, melody[index + 1].nonOverlappingPrefixSuffix);
 }
 
 // The function that updates the prefix and suffix of the melody from left to right
@@ -60,10 +57,12 @@ void updatePrefixSuffix(int left, int right)
 // The function that finds the common prefix suffix of two melodies
 int commonPrefixSuffix(int x, int y)
 {
-    if (x < y)
-        std::swap(x, y);
     while (x != y)
+    {
+        if (x < y)
+            std::swap(x, y);
         x = (x >= 2 * y) ? melody[x].nonOverlappingPrefixSuffix : melody[x].prefixSuffix;
+    }
 
     return x;
 }
@@ -71,9 +70,6 @@ int commonPrefixSuffix(int x, int y)
 // The function that calculates the result, which traverses the album and finds the common prefix suffix of the melodies
 int calculateResult()
 {
-    if (melody[album[0]].nonOverlappingPrefixSuffix == 0)
-        return 0;
-
     int result = melody[album[0]].nonOverlappingPrefixSuffix;
     for (int j = 1; j < numNotes; j++)
     {

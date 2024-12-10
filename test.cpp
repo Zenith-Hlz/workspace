@@ -4,8 +4,8 @@ using namespace std;
 
 int music[1500001];
 int len = 0;
-int harmony[1500001];
-int extraH[1500001];
+int nonover[1500001];
+int presuffix[1500001];
 int ques[1000001];
 
 int testNum = 0;
@@ -39,11 +39,11 @@ void calculateHarmony(int x)
 {
     if (x < 2)
         return;
-    int last = harmony[x - 1];
-    int extraL = extraH[x - 1];
+    int last = nonover[x - 1];
+    int extraL = presuffix[x - 1];
     if (last == x / 2)
     {
-        last = extraH[last];
+        last = presuffix[last];
     }
     int h = 0;
     while (true)
@@ -56,9 +56,9 @@ void calculateHarmony(int x)
         }
         if (last == 0)
             break;
-        last = extraH[last];
+        last = presuffix[last];
     }
-    harmony[x] = h;
+    nonover[x] = h;
     h = 0;
     while (true)
     {
@@ -70,9 +70,9 @@ void calculateHarmony(int x)
         }
         if (extraL == 0)
             break;
-        extraL = extraH[extraL];
+        extraL = presuffix[extraL];
     }
-    extraH[x] = h;
+    presuffix[x] = h;
 }
 
 int mergeHarmony(int x, int y)
@@ -85,16 +85,16 @@ int mergeHarmony(int x, int y)
         if (x > y)
         {
             if (x >= 2 * y)
-                x = harmony[x];
+                x = nonover[x];
             else
-                x = extraH[x];
+                x = presuffix[x];
         }
         else
         {
             if (y >= 2 * x)
-                y = harmony[y];
+                y = nonover[y];
             else
-                y = extraH[y];
+                y = presuffix[y];
         }
     }
     return x;
@@ -103,10 +103,10 @@ int mergeHarmony(int x, int y)
 void test()
 {
     for (int i = 1; i <= len; i++)
-        cout << harmony[i] << ' ';
+        cout << nonover[i] << ' ';
     cout << endl;
     for (int i = 1; i <= len; i++)
-        cout << extraH[i] << ' ';
+        cout << presuffix[i] << ' ';
     cout << endl;
 }
 
@@ -142,14 +142,14 @@ int main()
                 scanf("%d", &ques[j]);
             }
             quickSort(ques, 0, num - 1);
-            if (harmony[ques[0]] == 0)
+            if (nonover[ques[0]] == 0)
             {
                 printf("0\n");
                 continue;
             }
             for (int j = num - 1; j >= 0; j--)
             {
-                ans = mergeHarmony(ans, harmony[ques[j]]);
+                ans = mergeHarmony(ans, nonover[ques[j]]);
                 if (ans == 0)
                     break;
             }
