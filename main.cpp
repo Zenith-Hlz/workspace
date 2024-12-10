@@ -43,7 +43,7 @@ Node *merge(Node *a, Node *b)
 
 void join(int u, int v)
 {
-    int root_u = find(u - 1), root_v = find(v - 1);
+    int root_u = find(u), root_v = find(v);
     if (root_u == root_v)
         return;
 
@@ -55,7 +55,6 @@ int query(int u)
 {
     int root = find(u);
 
-    printf("root: %d\n", root);
     return nodes[root]->size < k ? -1 : nodes[root]->value;
 }
 
@@ -63,7 +62,7 @@ int main()
 {
     scanf("%d %d %d %d", &n, &m, &k, &q);
 
-    for (int i = 0; i < n; i++)
+    for (int i = 1; i <= n; i++)
     {
         int node;
         scanf("%d", &node);
@@ -88,7 +87,7 @@ int main()
         else
         {
             scanf("%d", &u);
-            printf("%d\n", query(u - 1));
+            printf("%d\n", query(u));
         }
     }
 }
