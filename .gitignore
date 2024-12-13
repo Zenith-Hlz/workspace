@@ -10,6 +10,8 @@ output
 inputs
 results
 
+assembly
+
 *.txt
 *.in
 *.out
