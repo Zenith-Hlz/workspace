@@ -28,7 +28,7 @@ for ((i=1; i<=num_runs; i++)); do
         exit 1
     fi
 
-    # Step 2: Compile and run `test.cpp` using `./input/input.txt` and save output to `./output/output_test.txt`
+    Step 2: Compile and run `test.cpp` using `./input/input.txt` and save output to `./output/output_test.txt`
     g++ -o test test.cpp
     if [ $? -ne 0 ]; then
         echo "Error: Compilation of test.cpp failed on run #$i"
@@ -40,6 +40,12 @@ for ((i=1; i<=num_runs; i++)); do
         echo "Error: test.cpp encountered a runtime error on run #$i"
         exit 1
     fi
+
+    # python3 test.py < ./input/input.txt > ./output/output_test.txt
+    # if [ $? -ne 0 ]; then
+    #     echo "Error: test.cpp encountered a runtime error on run #$i"
+    #     exit 1
+    # fi
 
     # Step 3: Compile and run `main.cpp` using `./input/input.txt` and save output to `./output/output_main.txt`
     g++ -o main main.cpp
