@@ -6,15 +6,6 @@ Welcome to my DSA (Data Structures and Algorithms) learning and coding workspace
 
 ```
 /
-├── 2024-fall-dsa/
-│   ├── LAB1/
-│   ├── LAB2/
-│   ├── LAB3/
-│   ├── LAB4/
-│   ├── PA1/
-│   ├── PA2/
-│   ├── PA3/
-│   └── PA4/
 ├── Sketch2View/
 │   ├── [Code and Learning Materials for SRT Project]
 ├── .gitignore
