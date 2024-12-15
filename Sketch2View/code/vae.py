@@ -225,8 +225,6 @@ for epoch in range(epochs):
         e.set_postfix({"loss": test_loss / test_nsample})
     # 每个epoch记录总损失
     loss_history["eval"].append(test_loss / test_nsample)
-    # 更新学习率
-    scheduler.step()
 
     # 展示效果
     # 按标准正态分布取样来自造数据
