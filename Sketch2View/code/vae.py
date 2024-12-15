@@ -35,23 +35,24 @@ def save_and_show_figure(name):
 class Encoder(nn.Module):
     def __init__(self, img_size, latent_dim, n_blocks=4):
         super(Encoder, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1)
-        self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1)
+        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
+        self.conv4 = nn.Conv2d(256, 512, kernel_size=3, stride=2, padding=1)
+        self.dropout = nn.Dropout(0.5)
 
         self.resnet_blocks = nn.Sequential(
             *[
                 ResnetBlock(
-                    256, "reflect", nn.BatchNorm2d, use_dropout=False, use_bias=True
+                    512, "reflect", nn.BatchNorm2d, use_dropout=False, use_bias=True
                 )
                 for _ in range(n_blocks)
             ]
         )
 
-        self.fc_mu = nn.Linear(256 * (img_size // 16) * (img_size // 16), latent_dim)
+        self.fc_mu = nn.Linear(512 * (img_size // 16) * (img_size // 16), latent_dim)
         self.fc_logvar = nn.Linear(
-            256 * (img_size // 16) * (img_size // 16), latent_dim
+            512 * (img_size // 16) * (img_size // 16), latent_dim
         )
 
     def forward(self, x):
@@ -59,6 +60,7 @@ class Encoder(nn.Module):
         x = torch.relu(self.conv2(x))
         x = torch.relu(self.conv3(x))
         x = torch.relu(self.conv4(x))
+        x = self.dropout(x)
 
         x = self.resnet_blocks(x)
 
@@ -73,33 +75,33 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.img_size = img_size
 
-        self.fc = nn.Linear(latent_dim, 256 * (img_size // 16) * (img_size // 16))
+        self.fc = nn.Linear(latent_dim, 512 * (img_size // 16) * (img_size // 16))
 
         self.resnet_blocks = nn.Sequential(
             *[
                 ResnetBlock(
-                    256, "reflect", nn.BatchNorm2d, use_dropout=False, use_bias=True
+                    512, "reflect", nn.BatchNorm2d, use_dropout=False, use_bias=True
                 )
                 for _ in range(n_blocks)
             ]
         )
 
         self.deconv1 = nn.ConvTranspose2d(
-            256, 128, kernel_size=3, stride=2, padding=1, output_padding=1
-        )
+            512, 256, kernel_size=3, stride=2, padding=1, output_padding=1
+        )  # Increased filters
         self.deconv2 = nn.ConvTranspose2d(
-            128, 64, kernel_size=3, stride=2, padding=1, output_padding=1
-        )
+            256, 128, kernel_size=3, stride=2, padding=1, output_padding=1
+        )  # Increased filters
         self.deconv3 = nn.ConvTranspose2d(
-            64, 32, kernel_size=3, stride=2, padding=1, output_padding=1
-        )
+            128, 64, kernel_size=3, stride=2, padding=1, output_padding=1
+        )  # Increased filters
         self.deconv4 = nn.ConvTranspose2d(
-            32, 3, kernel_size=3, stride=2, padding=1, output_padding=1
+            64, 3, kernel_size=3, stride=2, padding=1, output_padding=1
         )
 
     def forward(self, z):
         x = torch.relu(self.fc(z))
-        x = x.view(x.size(0), 256, self.img_size // 16, self.img_size // 16)
+        x = x.view(x.size(0), 512, self.img_size // 16, self.img_size // 16)
 
         x = self.resnet_blocks(x)
 
@@ -140,13 +142,13 @@ loss_KLD = lambda mu, sigma: -0.5 * torch.sum(
 
 "超参数及构造模型"
 # 模型参数
-latent_size = 128  # 压缩后的特征维度
+latent_size = 256  # 压缩后的特征维度
 hidden_size = 128  # encoder和decoder中间层的维度
 img_size = 224
 
 # 训练参数
-epochs = 6  # 训练时期
-batch_size = 32  # 每步训练样本数
+epochs = 20  # 训练时期
+batch_size = 64  # 每步训练样本数
 learning_rate = 1e-4  # 学习率
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # 训练设备
 
@@ -166,6 +168,8 @@ val_dataset = SKiSDataset("../SketchyScene-7k/", "val")
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
 # 训练及测试
 loss_history = {"train": [], "eval": []}
@@ -196,6 +200,8 @@ for epoch in range(epochs):
         t.set_postfix({"loss": train_loss / train_nsample})
     # 每个epoch记录总损失
     loss_history["train"].append(train_loss / train_nsample)
+    # 更新学习率
+    scheduler.step()
 
     # 测试
     model.eval()
@@ -219,6 +225,8 @@ for epoch in range(epochs):
         e.set_postfix({"loss": test_loss / test_nsample})
     # 每个epoch记录总损失
     loss_history["eval"].append(test_loss / test_nsample)
+    # 更新学习率
+    scheduler.step()
 
     # 展示效果
     # 按标准正态分布取样来自造数据
