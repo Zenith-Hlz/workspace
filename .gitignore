@@ -1,4 +1,4 @@
-.vscode
+.*
 
 main
 main.o
@@ -10,10 +10,10 @@ output
 inputs
 results
 
-assembly
+/DSA
+/ICS
+*.github.io
 
 *.txt
 *.in
 *.out
-
-*.csv
